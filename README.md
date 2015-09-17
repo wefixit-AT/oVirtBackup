@@ -27,6 +27,27 @@ Take a look at the example "config_example.cfg"
 * Export the VM to the NFS share
 * Delete the VM
 
+## Useful tips
+
+### crontab
+
+	00  20  *   *   *   /home/backup/oVirtBackup.git/backup.py -c /home/backup/oVirtBackup.git/config_webserver.cfg -d >> /var/log/oVirtBackup/webserver.log 
+
+Logrotate: /etc/logrotate.d/oVirtBackup
+
+	/var/log/oVirtBackup/* {
+    	daily
+    	rotate 14
+    	compress
+    	delaycompress
+    	missingok
+    	notifempty
+	}
+	
+### Security
+
+Set permissions to config.cfg only for the needed user (chmod 600 config.cfg).
+
 ## TODO's
 
 * When the ovirtsdk supports exporting a snapshot directly to a domain, the step of a VM creation can be removed to save some disk space during backup
