@@ -2,6 +2,12 @@
 
 This is a tool, written in Python, to make **online** fullbackup's of a VM which runs in an oVirt environment.
 
+## Requirements
+
+It is necessery to install the oVirt Python-sdk.
+
+[http://www.ovirt.org/Python-sdk](http://www.ovirt.org/Python-sdk)
+
 ## Usage
 
 backup.py -c config.cfg -d
@@ -27,7 +33,7 @@ Take a look at the example "config_example.cfg"
 
 ## Usefull links:
 
-* http://www.ovirt.org/REST-Api
-* http://www.ovirt.org/Python-sdk
-* http://www.ovirt.org/Testing/PythonApi
-* https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Virtualization/3.1/html-single/Developer_Guide/files/ovirtsdk.infrastructure.brokers.html#VMSnapshot
+* [http://www.ovirt.org/REST-Api](http://www.ovirt.org/REST-Api)
+* [http://www.ovirt.org/Python-sdk](http://www.ovirt.org/Python-sdk)
+* [http://www.ovirt.org/Testing/PythonApi](http://www.ovirt.org/Testing/PythonApi)
+* [https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Virtualization/3.1/html-single/Developer_Guide/files/ovirtsdk.infrastructure.brokers.html#VMSnapshot](https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Virtualization/3.1/html-single/Developer_Guide/files/ovirtsdk.infrastructure.brokers.html#VMSnapshot)
