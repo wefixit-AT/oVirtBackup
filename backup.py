@@ -16,6 +16,9 @@ def main(argv):
     try:
         opts, args = getopt(argv, "hc:d")
         debug = False
+        if not opts:
+            print usage
+            sys.exit(1)
         for opt, arg in opts:
             if (opt == "-h") or (opt == "--help"):
                 print usage
