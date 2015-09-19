@@ -71,22 +71,22 @@ class VMTools:
         :param vm: Virtual machine object
         :param config: Configuration
         """
-        vm_name = ""
+        i_vm_name = ""
         done = False
         try:
             for i in api.vms.list():
-                vm_name = str(i.get_name())
-                if vm_name.startswith(vm_name + config.get_vm_middle()):
+                i_vm_name = str(i.get_name())
+                if i_vm_name.startswith(vm_name + config.get_vm_middle()):
                     print "Delete cloned VM started ..."
                     if not config.get_dry_run():
-                        api.vms.get(vm_name).delete()
-                        while vm_name + config.get_vm_middle() in [vm.name for vm in api.vms.list()]:
+                        api.vms.get(i_vm_name).delete()
+                        while i_vm_name in [vm.name for vm in api.vms.list()]:
                             if config.get_debug():
                                 print "Deletion of cloned VM in progress ..."
                             time.sleep(config.get_timeout())
                         done = True
         except Exception as e:
-            print "Can't delete cloned VM (" + vm_name + ")"
+            print "Can't delete cloned VM (" + i_vm_name + ")"
             print "DEBUG: " + str(e)
             sys.exit(1)
         if done:
