@@ -27,7 +27,7 @@ class VMTools:
                 break
 
     @staticmethod
-    def delete_snapshots(vm, config):
+    def delete_snapshots(vm, config, vm_name):
         """
         Deletes a backup snapshot
         :param vm: Virtual machine object
@@ -57,7 +57,7 @@ class VMTools:
                                         time.sleep(config.get_timeout())
                                         continue
                         except Exception as e:
-                            print "  !!! Can't delete snapshot for VM: " + config.get_vm_name()
+                            print "  !!! Can't delete snapshot for VM: " + vm_name
                             print "  Description: " + i.get_description() + ", Created on: " + str(i.get_date())
                             print "  DEBUG: " + str(e)
                             sys.exit(1)
@@ -65,7 +65,7 @@ class VMTools:
                 print "Snapshots deleted"
                             
     @staticmethod
-    def delete_vm(api, config):
+    def delete_vm(api, config, vm_name):
         """
         Delets a vm which was created during backup
         :param vm: Virtual machine object
@@ -76,11 +76,11 @@ class VMTools:
         try:
             for i in api.vms.list():
                 vm_name = str(i.get_name())
-                if vm_name.startswith(config.get_vm_name() + config.get_vm_middle()):
+                if vm_name.startswith(vm_name + config.get_vm_middle()):
                     print "Delete cloned VM started ..."
                     if not config.get_dry_run():
                         api.vms.get(vm_name).delete()
-                        while config.get_vm_name() + config.get_vm_middle() in [vm.name for vm in api.vms.list()]:
+                        while vm_name + config.get_vm_middle() in [vm.name for vm in api.vms.list()]:
                             if config.get_debug():
                                 print "Deletion of cloned VM in progress ..."
                             time.sleep(config.get_timeout())
@@ -93,20 +93,20 @@ class VMTools:
             print "Cloned VM deleted"
 
     @staticmethod
-    def wait_for_vm_operation(api, config, comment):
+    def wait_for_vm_operation(api, config, comment, vm_name):
         """
         Wait for a vm operation to be finished
         :param vm: Virtual machine object
         :param config: Configuration
         :param comment: This comment will be used for debugging output
         """
-        while str(api.vms.get(config.get_vm_name() + config.get_vm_middle() + config.get_vm_suffix()).get_status().state) != 'down':
+        while str(api.vms.get(vm_name + config.get_vm_middle() + config.get_vm_suffix()).get_status().state) != 'down':
             if config.get_debug():
                 print comment + " in progress ..."
             time.sleep(config.get_timeout())
 
     @staticmethod
-    def delete_old_backups(api, config):
+    def delete_old_backups(api, config, vm_name):
         """
         Delete old backups from the export domain
         :param api: ovirtsdk api
@@ -115,7 +115,7 @@ class VMTools:
         exported_vms = api.storagedomains.get(config.get_export_domain()).vms.list()
         for i in exported_vms:
             vm_name = str(i.get_name())
-            if vm_name.startswith(config.get_vm_name() + config.get_vm_middle()):
+            if vm_name.startswith(vm_name + config.get_vm_middle()):
                 datetimeStart = datetime.datetime.combine((datetime.date.today() - datetime.timedelta(config.get_backup_keep_count())), datetime.datetime.min.time())
                 timestampStart = time.mktime(datetimeStart.timetuple())
                 datetimeCreation = i.get_creation_time()

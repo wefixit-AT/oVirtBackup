@@ -2,6 +2,7 @@ import time
 import ConfigParser
 from ConfigParser import NoSectionError, NoOptionError
 import sys
+import json
 
 class Config(object):
     """
@@ -12,7 +13,8 @@ class Config(object):
             config_parser = ConfigParser.RawConfigParser()
             config_parser.read(config_file)
             section = "config"
-            self.__vm_name = config_parser.get(section, "vm_name")
+            # self.__vm_names = config_parser.get(section, "vm_name")
+            self.__vm_names = json.loads(config_parser.get(section, "vm_names"))
             self.__vm_middle = config_parser.get(section, "vm_middle")
             self.__vm_suffix = "_" + str(int(time.time()))
             self.__server = config_parser.get(section, "server")
@@ -32,8 +34,8 @@ class Config(object):
             print str(e)
             sys.exit(1)
 
-    def get_vm_name(self):
-        return self.__vm_name
+    def get_vm_names(self):
+        return self.__vm_names
     
     def get_vm_middle(self):
         return self.__vm_middle
