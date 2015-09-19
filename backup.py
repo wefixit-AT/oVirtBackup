@@ -99,7 +99,7 @@ def main(argv):
             print "Export started ..."
             if not config.get_dry_run():
                 vm_clone.export(params.Action(storage_domain=api.storagedomains.get(config.get_export_domain())))
-                VMTools.wait_for_vm_operation(api, config, "Exporting")
+                VMTools.wait_for_vm_operation(api, config, "Exporting", vm_from_list)
             print "Exporting finished"
         except Exception as e:
             print "Can't export cloned VM (" + vm_from_list + config.get_vm_middle() + config.get_vm_suffix() + ") to domain: " + config.get_export_domain()
