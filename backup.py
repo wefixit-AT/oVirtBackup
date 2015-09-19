@@ -45,7 +45,6 @@ def main(argv):
     )
     
     # Test if all VM names are valid
-    # print "found "+str(len(vm_from_list))+" vm's"
     for vm_from_list in config.get_vm_names():
         if not api.vms.get(vm_from_list):
             print "!!! There are no VM with the following name in your cluster: " + vm_from_list
