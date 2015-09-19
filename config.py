@@ -13,7 +13,6 @@ class Config(object):
             config_parser = ConfigParser.RawConfigParser()
             config_parser.read(config_file)
             section = "config"
-            # self.__vm_names = config_parser.get(section, "vm_name")
             self.__vm_names = json.loads(config_parser.get(section, "vm_names"))
             self.__vm_middle = config_parser.get(section, "vm_middle")
             self.__vm_suffix = "_" + str(int(time.time()))
