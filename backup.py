@@ -71,7 +71,7 @@ def main(argv):
             print "Snapshot created"
         except Exception as e:
             print "Can't create snapshot for VM: " + vm_from_list
-            print "config.debug: " + str(e)
+            print "DEBUG: " + str(e)
             sys.exit(1)
         
         # Clone the snapshot into a VM
@@ -103,7 +103,7 @@ def main(argv):
             print "Exporting finished"
         except Exception as e:
             print "Can't export cloned VM (" + vm_from_list + config.get_vm_middle() + config.get_vm_suffix() + ") to domain: " + config.get_export_domain()
-            print "config.debug: " + str(e)
+            print "DEBUG: " + str(e)
             sys.exit(1)
             
         # Delete the VM
