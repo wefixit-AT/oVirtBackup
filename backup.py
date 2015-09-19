@@ -84,7 +84,7 @@ def main(argv):
         print "Clone into VM started ..."
         if not config.get_dry_run():
             api.vms.add(params.VM(name=vm_from_list + config.get_vm_middle() + config.get_vm_suffix(), memory=vm.get_memory(), cluster=api.clusters.get(config.get_cluster_name()), snapshots=snapshots_param))    
-            VMTools.wait_for_vm_operation(api, config, "Cloning")
+            VMTools.wait_for_vm_operation(api, config, "Cloning", vm_from_list)
         print "Cloning finished"
         
         # Delete backup snapshots
