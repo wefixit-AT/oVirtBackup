@@ -21,7 +21,7 @@ class VMTools:
                 if "ok" in str(snapshots[0].get_snapshot_status()):
                     break
                 if config.get_debug():
-                    print "Snapshot operation(" + comment + ") progress ..."
+                    print "Snapshot operation(" + comment + ") in progress ..."
                 time.sleep(config.get_timeout())
             else:
                 break
