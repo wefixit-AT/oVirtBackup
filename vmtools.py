@@ -116,7 +116,7 @@ class VMTools:
         for i in exported_vms:
             vm_name = str(i.get_name())
             if vm_name.startswith(config.get_vm_name() + config.get_vm_middle()):
-                datetimeStart = datetime.datetime.combine((datetime.date.today() - datetime.timedelta(config.backup_keep_count)), datetime.datetime.min.time())
+                datetimeStart = datetime.datetime.combine((datetime.date.today() - datetime.timedelta(config.get_backup_keep_count())), datetime.datetime.min.time())
                 timestampStart = time.mktime(datetimeStart.timetuple())
                 datetimeCreation = i.get_creation_time()
                 datetimeCreation = datetimeCreation.replace(hour=0, minute=0, second=0)
