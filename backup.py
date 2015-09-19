@@ -113,13 +113,13 @@ def main(argv):
         time_minutes = int(time_diff / 60)
         time_seconds = time_diff % 60
         
-        # Disconnect from the server
-        api.disconnect()
-        
         print "Duration: " + str(time_minutes) + ":" + str(time_seconds) + " minutes"
         print "VM exported as " + vm_from_list + config.get_vm_middle() + config.get_vm_suffix()
         print "Backup done for: " + vm_from_list
     print "All backups done"
+    
+    # Disconnect from the server
+    api.disconnect()
 
 if __name__ == "__main__":
    main(sys.argv[1:])
