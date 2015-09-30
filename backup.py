@@ -53,7 +53,7 @@ def main(argv):
     for vm_from_list in config.get_vm_names():
     
         print "Start backup for: " + vm_from_list
-    
+        
         # Get the VM
         vm = api.vms.get(vm_from_list)
         
