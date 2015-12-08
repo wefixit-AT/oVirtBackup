@@ -73,13 +73,13 @@ def main(argv):
         except Exception as e:
             print "Can't create snapshot for VM: " + vm_from_list
             print "DEBUG: " + str(e)
-            sys.exit(1)
+            continue
         
         # Clone the snapshot into a VM
         snapshots = vm.snapshots.list(description=config.get_snapshot_description())
         if not snapshots:
             print "!!! No snapshot found"
-            sys.exit(1)
+            continue
         snapshot_param = params.Snapshot(id=snapshots[0].id)
         snapshots_param = params.Snapshots(snapshot=[snapshot_param])
         print "Clone into VM started ..."
@@ -105,7 +105,7 @@ def main(argv):
         except Exception as e:
             print "Can't export cloned VM (" + vm_from_list + config.get_vm_middle() + config.get_vm_suffix() + ") to domain: " + config.get_export_domain()
             print "DEBUG: " + str(e)
-            sys.exit(1)
+            continue
             
         # Delete the VM
         VMTools.delete_vm(api, config, vm_from_list)
