@@ -58,6 +58,10 @@ class VMTools:
                                             print "Got 409 wait for operation to be finished, DEBUG: " + str(e)
                                         time.sleep(config.get_timeout())
                                         continue
+                                    else:
+                                        print "  !!! Found another exception for VM: " + vm_name
+                                        print "  DEBUG: " + str(e)
+                                        sys.exit(1)
                         except Exception as e:
                             print "  !!! Can't delete snapshot for VM: " + vm_name
                             print "  Description: " + i.get_description() + ", Created on: " + str(i.get_date())
@@ -88,9 +92,8 @@ class VMTools:
                             time.sleep(config.get_timeout())
                         done = True
         except Exception as e:
-            print "Can't delete cloned VM (" + i_vm_name + ")"
-            print "DEBUG: " + str(e)
-            sys.exit(1)
+            print "!!! Can't delete cloned VM (" + i_vm_name + ")"
+            raise e
         if done:
             print "Cloned VM deleted"
 
