@@ -7,6 +7,7 @@ import time
 from vmtools import VMTools
 from config import Config
 from getopt import getopt, GetoptError
+from logger import Logger
 
 """
 Main class to make the backups
@@ -52,7 +53,7 @@ def main(argv):
     
     for vm_from_list in config.get_vm_names():
     
-        print "Start backup for: " + vm_from_list
+        Logger.log("Start backup for: " + vm_from_list)
         try:
             # Get the VM
             vm = api.vms.get(vm_from_list)
@@ -65,30 +66,30 @@ def main(argv):
         
             # Create a VM snapshot:
             try:
-                print "Snapshot creation started ..."
+                Logger.log("Snapshot creation started ...")
                 if not config.get_dry_run():
                     vm.snapshots.add(params.Snapshot(description=config.get_snapshot_description(), vm=vm))
                     VMTools.wait_for_snapshot_operation(vm, config, "creation")
-                print "Snapshot created"
+                Logger.log("Snapshot created")
             except Exception as e:
-                print "Can't create snapshot for VM: " + vm_from_list
-                print "DEBUG: " + str(e)
+                Logger.log("Can't create snapshot for VM: " + vm_from_list)
+                Logger.log("DEBUG: " + str(e))
                 has_errors = True
                 continue
         
             # Clone the snapshot into a VM
             snapshots = vm.snapshots.list(description=config.get_snapshot_description())
             if not snapshots:
-                print "!!! No snapshot found"
+                Logger.log("!!! No snapshot found")
                 has_errors = True
                 continue
             snapshot_param = params.Snapshot(id=snapshots[0].id)
             snapshots_param = params.Snapshots(snapshot=[snapshot_param])
-            print "Clone into VM started ..."
+            Logger.log("Clone into VM started ...")
             if not config.get_dry_run():
                 api.vms.add(params.VM(name=vm_from_list + config.get_vm_middle() + config.get_vm_suffix(), memory=vm.get_memory(), cluster=api.clusters.get(config.get_cluster_name()), snapshots=snapshots_param))    
                 VMTools.wait_for_vm_operation(api, config, "Cloning", vm_from_list)
-            print "Cloning finished"
+            Logger.log("Cloning finished")
         
             # Delete backup snapshots
             VMTools.delete_snapshots(vm, config, vm_from_list)
@@ -99,14 +100,14 @@ def main(argv):
             # Export the VM
             try:
                 vm_clone = api.vms.get(vm_from_list + config.get_vm_middle() + config.get_vm_suffix())
-                print "Export started ..."
+                Logger.log("Export started ...")
                 if not config.get_dry_run():
                     vm_clone.export(params.Action(storage_domain=api.storagedomains.get(config.get_export_domain())))
                     VMTools.wait_for_vm_operation(api, config, "Exporting", vm_from_list)
-                print "Exporting finished"
+                Logger.log("Exporting finished")
             except Exception as e:
-                print "Can't export cloned VM (" + vm_from_list + config.get_vm_middle() + config.get_vm_suffix() + ") to domain: " + config.get_export_domain()
-                print "DEBUG: " + str(e)
+                Logger.log("Can't export cloned VM (" + vm_from_list + config.get_vm_middle() + config.get_vm_suffix() + ") to domain: " + config.get_export_domain())
+                Logger.log("DEBUG: " + str(e))
                 has_errors = True
                 continue
             
@@ -118,31 +119,31 @@ def main(argv):
             time_minutes = int(time_diff / 60)
             time_seconds = time_diff % 60
         
-            print "Duration: " + str(time_minutes) + ":" + str(time_seconds) + " minutes"
-            print "VM exported as " + vm_from_list + config.get_vm_middle() + config.get_vm_suffix()
-            print "Backup done for: " + vm_from_list
+            Logger.log("Duration: " + str(time_minutes) + ":" + str(time_seconds) + " minutes")
+            Logger.log("VM exported as " + vm_from_list + config.get_vm_middle() + config.get_vm_suffix())
+            Logger.log("Backup done for: " + vm_from_list)
             vms_with_failures.remove(vm_from_list)
         except errors.ConnectionError as e:
-            print "!!! Can't connect to the server" + str(e)
+            Logger.log("!!! Can't connect to the server" + str(e))
             connect()
             continue
         except errors.RequestError as e:
-            print "!!! Got a RequestError: " + str(e)
+            Logger.log("!!! Got a RequestError: " + str(e))
             has_errors = True
             continue
         except  Exception as e:
-            print "!!! Got unexpected exception: " + str(e)
+            Logger.log("!!! Got unexpected exception: " + str(e))
             sys.exit(1)
 
-    print "All backups done"
+    Logger.log("All backups done")
 
     if vms_with_failures:
-        print "Backup failured for:"
+        Logger.log("Backup failured for:")
         for i in vms_with_failures:
-            print "  " + i
+            Logger.log("  " + i)
    
     if has_errors:
-        print "Some errors occured during the backup, please check the log file"
+        Logger.log("Some errors occured during the backup, please check the log file")
         sys.exit(1)
  
     # Disconnect from the server

@@ -1,6 +1,7 @@
 import time 
 import sys
 import datetime
+from logger import Logger
 
 class VMTools:
     """
@@ -21,7 +22,7 @@ class VMTools:
                 if "ok" in str(snapshots[0].get_snapshot_status()):
                     break
                 if config.get_debug():
-                    print "Snapshot operation(" + comment + ") in progress ..."
+                    Logger.log("Snapshot operation(" + comment + ") in progress ...")
                 time.sleep(config.get_timeout())
             else:
                 break
@@ -37,38 +38,38 @@ class VMTools:
         done = False
         if snapshots:
             if config.get_debug():
-                print "Found snapshots(" + str(len(snapshots)) + "):"
+                Logger.log("Found snapshots(" + str(len(snapshots)) + "):")
             for i in snapshots:
                 if snapshots:
                     if config.get_debug():
-                        print "Snapshots description: " + i.get_description() + ", Created on: " + str(i.get_date())
+                        Logger.log("Snapshots description: " + i.get_description() + ", Created on: " + str(i.get_date()))
                     for i in snapshots:
                         try:
                             while True:
                                 try:
                                     if not config.get_dry_run():
                                         i.delete()
-                                    print "Snapshot deletion started ..."
+                                    Logger.log("Snapshot deletion started ...")
                                     VMTools.wait_for_snapshot_operation(vm, config, "deletion")
                                     done = True
                                     break
                                 except Exception as e:
                                     if "status: 409" in str(e):
                                         if config.get_debug():
-                                            print "Got 409 wait for operation to be finished, DEBUG: " + str(e)
+                                            Logger.log("Got 409 wait for operation to be finished, DEBUG: " + str(e))
                                         time.sleep(config.get_timeout())
                                         continue
                                     else:
-                                        print "  !!! Found another exception for VM: " + vm_name
-                                        print "  DEBUG: " + str(e)
+                                        Logger.log("  !!! Found another exception for VM: " + vm_name)
+                                        Logger.log("  DEBUG: " + str(e))
                                         sys.exit(1)
                         except Exception as e:
-                            print "  !!! Can't delete snapshot for VM: " + vm_name
-                            print "  Description: " + i.get_description() + ", Created on: " + str(i.get_date())
-                            print "  DEBUG: " + str(e)
+                            Logger.log("  !!! Can't delete snapshot for VM: " + vm_name)
+                            Logger.log("  Description: " + i.get_description() + ", Created on: " + str(i.get_date()))
+                            Logger.log("  DEBUG: " + str(e))
                             sys.exit(1)
             if done:
-                print "Snapshots deleted"
+                Logger.log("Snapshots deleted")
                             
     @staticmethod
     def delete_vm(api, config, vm_name):
@@ -83,19 +84,19 @@ class VMTools:
             for i in api.vms.list():
                 i_vm_name = str(i.get_name())
                 if i_vm_name.startswith(vm_name + config.get_vm_middle()):
-                    print "Delete cloned VM started ..."
+                    Logger.log("Delete cloned VM started ...")
                     if not config.get_dry_run():
                         api.vms.get(i_vm_name).delete()
                         while i_vm_name in [vm.name for vm in api.vms.list()]:
                             if config.get_debug():
-                                print "Deletion of cloned VM in progress ..."
+                                Logger.log("Deletion of cloned VM in progress ...")
                             time.sleep(config.get_timeout())
                         done = True
         except Exception as e:
-            print "!!! Can't delete cloned VM (" + i_vm_name + ")"
+            Logger.log("!!! Can't delete cloned VM (" + i_vm_name + ")")
             raise e
         if done:
-            print "Cloned VM deleted"
+            Logger.log("Cloned VM deleted")
 
     @staticmethod
     def wait_for_vm_operation(api, config, comment, vm_name):
@@ -107,7 +108,7 @@ class VMTools:
         """
         while str(api.vms.get(vm_name + config.get_vm_middle() + config.get_vm_suffix()).get_status().state) != 'down':
             if config.get_debug():
-                print comment + " in progress ..."
+                Logger.log(comment + " in progress ...")
             time.sleep(config.get_timeout())
 
     @staticmethod
@@ -127,10 +128,10 @@ class VMTools:
                 datetimeCreation = datetimeCreation.replace(hour=0, minute=0, second=0)
                 timestampCreation = time.mktime(datetimeCreation.timetuple())
                 if timestampCreation < timestampStart:
-                    print "Backup deletion started for backup: " + vm_name_export
+                    Logger.log("Backup deletion started for backup: " + vm_name_export)
                     if not config.get_dry_run():
                         i.delete()
                         while vm_name_export in [vm.name for vm in api.storagedomains.get(config.get_export_domain()).vms.list()]:
                             if config.get_debug():
-                                print "Delete old backup in progress ..."
+                                Logger.log("Delete old backup in progress ...")
                             time.sleep(config.get_timeout())
