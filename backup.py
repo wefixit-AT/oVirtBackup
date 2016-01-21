@@ -49,7 +49,7 @@ def main(argv):
             print "!!! There are no VM with the following name in your cluster: " + vm_from_list
             sys.exit(1)
 
-    vms_with_failures = config.get_vm_names()
+    vms_with_failures = list(config.get_vm_names())
     
     for vm_from_list in config.get_vm_names():
     
