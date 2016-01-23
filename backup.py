@@ -47,11 +47,21 @@ def main(argv):
     for vm_from_list in config.get_vm_names():
         if not api.vms.get(vm_from_list):
             print "!!! There are no VM with the following name in your cluster: " + vm_from_list
+            api.disconnect()
             sys.exit(1)
 
     vms_with_failures = list(config.get_vm_names())
     
     for vm_from_list in config.get_vm_names():
+        vm_clone_name = vm_from_list + config.get_vm_middle() + config.get_vm_suffix()
+
+        # Check VM name length limitation
+        length = len(vm_clone_name)
+        if length > config.get_vm_name_max_length():
+            print "!!! VM name with middle and suffix are to long (size: " + str(length) + ", allowed " + str(config.get_vm_name_max_length()) + ") !!!"
+            Logger.log("VM name: " + vm_clone_name)
+            api.disconnect()
+            sys.exit(1)
     
         Logger.log("Start backup for: " + vm_from_list)
         try:
@@ -87,7 +97,7 @@ def main(argv):
             snapshots_param = params.Snapshots(snapshot=[snapshot_param])
             Logger.log("Clone into VM started ...")
             if not config.get_dry_run():
-                api.vms.add(params.VM(name=vm_from_list + config.get_vm_middle() + config.get_vm_suffix(), memory=vm.get_memory(), cluster=api.clusters.get(config.get_cluster_name()), snapshots=snapshots_param))    
+                api.vms.add(params.VM(name=vm_clone_name, memory=vm.get_memory(), cluster=api.clusters.get(config.get_cluster_name()), snapshots=snapshots_param))    
                 VMTools.wait_for_vm_operation(api, config, "Cloning", vm_from_list)
             Logger.log("Cloning finished")
         
@@ -99,14 +109,14 @@ def main(argv):
         
             # Export the VM
             try:
-                vm_clone = api.vms.get(vm_from_list + config.get_vm_middle() + config.get_vm_suffix())
+                vm_clone = api.vms.get(vm_clone_name)
                 Logger.log("Export started ...")
                 if not config.get_dry_run():
                     vm_clone.export(params.Action(storage_domain=api.storagedomains.get(config.get_export_domain())))
                     VMTools.wait_for_vm_operation(api, config, "Exporting", vm_from_list)
                 Logger.log("Exporting finished")
             except Exception as e:
-                Logger.log("Can't export cloned VM (" + vm_from_list + config.get_vm_middle() + config.get_vm_suffix() + ") to domain: " + config.get_export_domain())
+                Logger.log("Can't export cloned VM (" + vm_clone_name + ") to domain: " + config.get_export_domain())
                 Logger.log("DEBUG: " + str(e))
                 has_errors = True
                 continue
@@ -120,7 +130,7 @@ def main(argv):
             time_seconds = time_diff % 60
         
             Logger.log("Duration: " + str(time_minutes) + ":" + str(time_seconds) + " minutes")
-            Logger.log("VM exported as " + vm_from_list + config.get_vm_middle() + config.get_vm_suffix())
+            Logger.log("VM exported as " + vm_clone_name)
             Logger.log("Backup done for: " + vm_from_list)
             vms_with_failures.remove(vm_from_list)
         except errors.ConnectionError as e:
@@ -133,6 +143,7 @@ def main(argv):
             continue
         except  Exception as e:
             Logger.log("!!! Got unexpected exception: " + str(e))
+            api.disconnect()
             sys.exit(1)
 
     Logger.log("All backups done")
@@ -144,6 +155,7 @@ def main(argv):
    
     if has_errors:
         Logger.log("Some errors occured during the backup, please check the log file")
+        api.disconnect()
         sys.exit(1)
  
     # Disconnect from the server

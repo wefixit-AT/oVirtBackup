@@ -26,6 +26,7 @@ class Config(object):
             self.__backup_keep_count = config_parser.getint(section, "backup_keep_count")
             self.__dry_run = config_parser.getboolean(section, "dry_run")
             self.__debug = debug
+            self.__vm_name_max_length = config_parser.getint(section, "vm_name_max_length")
         except NoSectionError as e:
             print str(e)
             sys.exit(1)
@@ -82,3 +83,7 @@ class Config(object):
 
     def get_debug(self):
         return self.__debug
+
+
+    def get_vm_name_max_length(self):
+        return self.__vm_name_max_length
