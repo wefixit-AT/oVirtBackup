@@ -53,6 +53,7 @@ def main(argv):
     vms_with_failures = list(config.get_vm_names())
     
     for vm_from_list in config.get_vm_names():
+        config.clear_vm_suffix()
         vm_clone_name = vm_from_list + config.get_vm_middle() + config.get_vm_suffix()
 
         # Check VM name length limitation

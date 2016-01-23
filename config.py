@@ -1,8 +1,8 @@
-import time
 import ConfigParser
 from ConfigParser import NoSectionError, NoOptionError
 import sys
 import json
+from time import strftime
 
 class Config(object):
     """
@@ -15,7 +15,8 @@ class Config(object):
             section = "config"
             self.__vm_names = json.loads(config_parser.get(section, "vm_names"))
             self.__vm_middle = config_parser.get(section, "vm_middle")
-            self.__vm_suffix = "_" + str(int(time.time()))
+            self.__vm_suffix = "_"
+            self.clear_vm_suffix
             self.__server = config_parser.get(section, "server")
             self.__username = config_parser.get(section, "username")
             self.__password = config_parser.get(section, "password")
@@ -39,6 +40,10 @@ class Config(object):
     
     def get_vm_middle(self):
         return self.__vm_middle
+
+
+    def clear_vm_suffix(self):
+        self.__vm_suffix = "_" + strftime("%Y%m%d_%H%M%S")
 
 
     def get_vm_suffix(self):
