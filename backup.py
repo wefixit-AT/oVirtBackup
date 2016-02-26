@@ -10,6 +10,7 @@ from getopt import getopt, GetoptError
 from logger import Logger
 import vmlist
 
+all_vms = False
 """
 Main class to make the backups
 """
@@ -30,7 +31,7 @@ def main(argv):
                 config_file = arg
             elif opt in ("-d"):
                 debug = True
-            elif opt in ("-a")
+            elif opt in ("-a"):
                 all_vms = True
     except GetoptError:
         print usage
