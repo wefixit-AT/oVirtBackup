@@ -10,7 +10,6 @@ from getopt import getopt, GetoptError
 from logger import Logger
 import vmlist
 
-all_vms = False
 """
 Main class to make the backups
 """
@@ -18,8 +17,9 @@ Main class to make the backups
 def main(argv):
     usage = "backup.py -c <config.cfg>"
     try:
-        opts, args = getopt(argv, "hc:d")
+        opts, args = getopt(argv, "hac:d")
         debug = False
+        all_vms = False
         if not opts:
             print usage
             sys.exit(1)
@@ -50,7 +50,7 @@ def main(argv):
     #add all vms to config file
     if all_vms:
         vms=api.vms.list(max=400)
-        vmlist.get_vm_list(vms)
+        vmlist.get_vm_list(vms,config_file)
 
     # Test if all VM names are valid
     for vm_from_list in config.get_vm_names():
