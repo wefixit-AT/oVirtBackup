@@ -8,6 +8,7 @@ from vmtools import VMTools
 from config import Config
 from getopt import getopt, GetoptError
 from logger import Logger
+import vmlist
 
 """
 Main class to make the backups
@@ -29,6 +30,8 @@ def main(argv):
                 config_file = arg
             elif opt in ("-d"):
                 debug = True
+	    elif opt in ("-a")
+		all_vms = True
     except GetoptError:
         print usage
         sys.exit(1)
@@ -42,7 +45,12 @@ def main(argv):
     
     # Connect to server
     connect()
-    
+   
+    #add all vms to config file
+    if all_vms:
+    	vms=api.vms.list(max=400) 
+	vmlist.get_vm_list(vms)
+
     # Test if all VM names are valid
     for vm_from_list in config.get_vm_names():
         if not api.vms.get(vm_from_list):
