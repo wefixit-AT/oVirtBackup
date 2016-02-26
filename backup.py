@@ -48,7 +48,7 @@ def main(argv):
    
     #add all vms to config file
     if all_vms:
-    	vms=api.vms.list(max=400) 
+    	vms=api.vms.list(max=400)
 	vmlist.get_vm_list(vms)
 
     # Test if all VM names are valid
