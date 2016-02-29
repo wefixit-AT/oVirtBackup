@@ -13,7 +13,7 @@ It is necessery to install the oVirt Python-sdk.
 backup.py -c config.cfg -d
 
 	-c ... Path to the config file
-	-a ... prompts tool to backup all vms (wipes out vm list in config file)
+	-a ... prompts tool to backup all vms (replace vm list in config file)
 	-d ... Debug flag
 
 ## Configuration
