@@ -10,11 +10,9 @@ It is necessery to install the oVirt Python-sdk.
 
 ## Usage
 
-backup.py -c config.cfg -d
+Take a look at the usage text.
 
-	-c ... Path to the config file
-	-a ... prompts tool to backup all vms (replace vm list in config file)
-	-d ... Debug flag
+    backup.py -h
 
 ## Configuration
 

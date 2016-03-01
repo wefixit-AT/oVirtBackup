@@ -14,19 +14,24 @@ import vmlist
 Main class to make the backups
 """
 
+def usage():
+    print "Usage: backup.py -c <config.cfg> [-a] [-d] [-h]"
+    print "\t-c\tPath to the config file"
+    print "\t-a\tBackup all VM's and override the list of VM's in the config file"
+    print "\t-d\tDebug flag"
+    print "\t-h\tDisplay this help and exit"
+    sys.exit(0)
+
 def main(argv):
-    usage = "backup.py -c <config.cfg>"
     try:
         opts, args = getopt(argv, "hac:d")
         debug = False
         all_vms = False
         if not opts:
-            print usage
-            sys.exit(1)
+            usage()
         for opt, arg in opts:
             if (opt == "-h") or (opt == "--help"):
-                print usage
-                sys.exit(0)
+                usage()
             elif opt in ("-c"):
                 config_file = arg
             elif opt in ("-d"):
@@ -34,8 +39,7 @@ def main(argv):
             elif opt in ("-a"):
                 all_vms = True
     except GetoptError:
-        print usage
-        sys.exit(1)
+        usage()
     
     global config    
     config = Config(config_file, debug)
