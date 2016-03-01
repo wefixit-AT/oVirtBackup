@@ -86,7 +86,10 @@ class VMTools:
                 if i_vm_name.startswith(vm_name + config.get_vm_middle()):
                     Logger.log("Delete cloned VM started ...")
                     if not config.get_dry_run():
-                        api.vms.get(i_vm_name).delete()
+                        vm = api.vms.get(i_vm_name)
+                        vm.delete_protected = False
+                        vm = vm.update()
+                        vm.delete()
                         while i_vm_name in [vm.name for vm in api.vms.list()]:
                             if config.get_debug():
                                 Logger.log("Deletion of cloned VM in progress ...")
