@@ -138,3 +138,21 @@ class VMTools:
                             if config.get_debug():
                                 Logger.log("Delete old backup in progress ...")
                             time.sleep(config.get_timeout())
+
+    @staticmethod
+    def check_free_space(api, config, vm):
+        """
+        Check if the summarized size of all VM disks is available on the storagedomain
+        to avoid running out of space
+        """
+        sd = api.storagedomains.get(config.get_storage_domain())
+        vm_size = 0
+        for disk in vm.disks.list():
+            # For safety reason "vm.actual_size" is not used
+            vm_size += disk.size
+        storage_space_threshold = 0
+        if config.get_storage_space_threshold() > 0:
+            storage_space_threshold = config.get_storage_space_threshold()
+        vm_size *= (1 + storage_space_threshold)
+        if (sd.available - vm_size) <= 0:
+            raise Exception("!!! The is not enough free storage on the storage domain '" + config.get_storage_domain() + "' available to backup the VM '" + vm.name + "'")

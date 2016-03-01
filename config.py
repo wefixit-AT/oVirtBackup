@@ -28,6 +28,8 @@ class Config(object):
             self.__dry_run = config_parser.getboolean(section, "dry_run")
             self.__debug = debug
             self.__vm_name_max_length = config_parser.getint(section, "vm_name_max_length")
+            self.__storage_domain = config_parser.get(section, "storage_domain")
+            self.__storage_space_threshold = config_parser.getfloat(section, "storage_space_threshold")
         except NoSectionError as e:
             print str(e)
             sys.exit(1)
@@ -92,3 +94,11 @@ class Config(object):
 
     def get_vm_name_max_length(self):
         return self.__vm_name_max_length
+
+
+    def get_storage_domain(self):
+        return self.__storage_domain
+
+
+    def get_storage_space_threshold(self):
+        return self.__storage_space_threshold

@@ -50,8 +50,8 @@ def main(argv):
     
     # Connect to server
     connect()
-   
-    #add all vms to config file
+
+    # Add all VM's to the config file
     if all_vms:
         vms=api.vms.list(max=400)
         vmlist.get_vm_list(vms,config_file)
@@ -87,6 +87,9 @@ def main(argv):
         
             # Delete old backup snapshots
             VMTools.delete_snapshots(vm, config, vm_from_list)
+
+            # Check free space on the storage
+            VMTools.check_free_space(api, config, vm)
         
             # Create a VM snapshot:
             try:
