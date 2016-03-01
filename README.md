@@ -4,7 +4,7 @@ This is a tool, written in Python, to make **online** fullbackup's of a VM which
 
 ## Requirements
 
-It is necessery to install the oVirt Python-sdk.
+It is necessary to install the oVirt Python-sdk.
 
 [http://www.ovirt.org/Python-sdk](http://www.ovirt.org/Python-sdk)
 
