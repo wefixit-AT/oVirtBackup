@@ -51,7 +51,7 @@ Set permissions to config.cfg only for the needed user (chmod 600 config.cfg).
 
 * When the ovirtsdk supports exporting a snapshot directly to a domain, the step of a VM creation can be removed to save some disk space during backup
 
-## Usefull links:
+## Useful links:
 
 * [http://www.ovirt.org/REST-Api](http://www.ovirt.org/REST-Api)
 * [http://www.ovirt.org/Python-sdk](http://www.ovirt.org/Python-sdk)
