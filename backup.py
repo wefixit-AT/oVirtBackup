@@ -55,6 +55,7 @@ def main(argv):
     if all_vms:
         vms=api.vms.list(max=400)
         vmlist.get_vm_list(vms,config_file)
+        config = Config(config_file, debug)
 
     # Test if all VM names are valid
     for vm_from_list in config.get_vm_names():
