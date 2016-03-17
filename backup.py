@@ -64,6 +64,12 @@ def main(argv):
             api.disconnect()
             sys.exit(1)
 
+    # Test if config vm_middle is valid
+    if not config.get_vm_middle():
+        print "!!! It's not valid to leave vm_middle empty"
+        api.disconnect()
+        sys.exit(1)
+
     vms_with_failures = list(config.get_vm_names())
     
     for vm_from_list in config.get_vm_names():
