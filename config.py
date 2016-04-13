@@ -28,6 +28,7 @@ class Config(object):
             self.__dry_run = config_parser.getboolean(section, "dry_run")
             self.__debug = debug
             self.__vm_name_max_length = config_parser.getint(section, "vm_name_max_length")
+            self.__use_short_suffix = config_parser.getboolean(section, "use_short_suffix")
             self.__storage_domain = config_parser.get(section, "storage_domain")
             self.__storage_space_threshold = config_parser.getfloat(section, "storage_space_threshold")
         except NoSectionError as e:
@@ -46,6 +47,8 @@ class Config(object):
 
     def clear_vm_suffix(self):
         self.__vm_suffix = "_" + strftime("%Y%m%d_%H%M%S")
+        if self.__use_short_suffix:
+            self.__vm_suffix = "_" + strftime("%m%d%S")
 
 
     def get_vm_suffix(self):
@@ -94,6 +97,10 @@ class Config(object):
 
     def get_vm_name_max_length(self):
         return self.__vm_name_max_length
+
+
+    def get_use_short_suffix(self):
+        return self.__use_short_suffix
 
 
     def get_storage_domain(self):
