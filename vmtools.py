@@ -149,7 +149,8 @@ class VMTools:
         vm_size = 0
         for disk in vm.disks.list():
             # For safety reason "vm.actual_size" is not used
-            vm_size += disk.size
+            if disk.size is not None:
+                vm_size += disk.size
         storage_space_threshold = 0
         if config.get_storage_space_threshold() > 0:
             storage_space_threshold = config.get_storage_space_threshold()
