@@ -57,6 +57,24 @@ def main(argv):
         vmlist.get_vm_list(vms,config_file)
         config = Config(config_file, debug)
 
+    # Test if config export_domain is valid
+    if api.storagedomains.get(config.get_export_domain()) is None:
+        print "!!! Check the export_domain in the config"
+        api.disconnect()
+        sys.exit(1)
+    
+    # Test if config cluster_name is valid
+    if api.clusters.get(config.get_cluster_name()) is None:
+        print "!!! Check the cluster_name in the config"
+        api.disconnect()
+        sys.exit(1)
+    
+    # Test if config storage_domain is valid
+    if api.storagedomains.get(config.get_storage_domain()) is None:
+        print "!!! Check the storage_domain in the config"
+        api.disconnect()
+        sys.exit(1)
+
     # Test if all VM names are valid
     for vm_from_list in config.get_vm_names():
         if not api.vms.get(vm_from_list):
