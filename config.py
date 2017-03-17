@@ -1,8 +1,21 @@
-import ConfigParser
-from ConfigParser import NoSectionError, NoOptionError
+from ConfigParser import (
+    RawConfigParser,
+    NoSectionError,
+    NoOptionError,
+)
 import sys
 import json
 from time import strftime
+
+
+CONFIG_SECTION = "config"
+DEFAUTLS = {
+    CONFIG_SECTION: {
+        "logger_fmt": "%(asctime)s: %(message)s",
+        "logger_file_path": None,
+    }
+}
+
 
 class Config(object):
     """
@@ -10,9 +23,9 @@ class Config(object):
     """
     def __init__(self, config_file, debug):
         try:
-            config_parser = ConfigParser.RawConfigParser()
+            config_parser = RawConfigParser(defaults=DEFAUTLS)
             config_parser.read(config_file)
-            section = "config"
+            section = CONFIG_SECTION
             self.__vm_names = json.loads(config_parser.get(section, "vm_names"))
             self.__vm_middle = config_parser.get(section, "vm_middle")
             self.__vm_suffix = "_"
@@ -31,6 +44,8 @@ class Config(object):
             self.__use_short_suffix = config_parser.getboolean(section, "use_short_suffix")
             self.__storage_domain = config_parser.get(section, "storage_domain")
             self.__storage_space_threshold = config_parser.getfloat(section, "storage_space_threshold")
+            self.__logger_fmt = config_parser.get(section, "logger_fmt")
+            self.__logger_file_path = config_parser.get(section, "logger_file_path")
         except NoSectionError as e:
             print str(e)
             sys.exit(1)
@@ -40,7 +55,7 @@ class Config(object):
 
     def get_vm_names(self):
         return self.__vm_names
-    
+
     def get_vm_middle(self):
         return self.__vm_middle
 
@@ -109,3 +124,10 @@ class Config(object):
 
     def get_storage_space_threshold(self):
         return self.__storage_space_threshold
+
+
+    def get_logger_fmt(self):
+        return self.__logger_fmt
+
+    def get_logger_file_path(self):
+        return self.__logger_file_path
