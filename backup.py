@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import logging
+from argparse import ArgumentParser, FileType
 import ovirtsdk.api
 from ovirtsdk.xml import params
 from ovirtsdk.infrastructure import errors
@@ -7,8 +8,6 @@ import sys
 import time
 from vmtools import VMTools
 from config import Config
-from getopt import getopt, GetoptError
-import vmlist
 
 """
 Main class to make the backups
@@ -16,14 +15,6 @@ Main class to make the backups
 
 logger = logging.getLogger()
 
-
-def usage():
-    print "Usage: backup.py -c <config.cfg> [-a] [-d] [-h]"
-    print "\t-c\tPath to the config file"
-    print "\t-a\tBackup all VM's and override the list of VM's in the config file"
-    print "\t-d\tDebug flag"
-    print "\t-h\tDisplay this help and exit"
-    sys.exit(0)
 
 def initialize_logger(logger_fmt, logger_file_path, debug):
     logger_options = {
@@ -34,29 +25,169 @@ def initialize_logger(logger_fmt, logger_file_path, debug):
         logger_options['filename'] = logger_file_path
     logging.basicConfig(**logger_options)
 
+def create_argparser():
+    p = ArgumentParser()
+    # General options
+    p.add_argument(
+        "-c", "--config-file",
+        help="Path to the config file, pass dash (-) for stdin",
+        dest="config_file",
+        required=True,
+        type=FileType(),
+    )
+    p.add_argument(
+        "-d", "--debug",
+        help="Debug flag",
+        dest="debug",
+        action="store_true",
+        default=False,
+    )
+    p.add_argument(
+        "--dry-run",
+        help="When set no operation takes effect",
+        dest="dry_run",
+        action="store_true",
+        default=None,  # None because we need to recognize whether it was set.
+    )
+
+    osg = p.add_argument_group("oVirt server related options")
+    osg.add_argument(
+        "--server",
+        help="URL to connect to your engine",
+        dest="server",
+        default=None,
+    )
+    osg.add_argument(
+        "--username",
+        help="Username to connect to the engine",
+        dest="username",
+        default=None,
+    )
+    osg.add_argument(
+        "--password",
+        help="Password to connect to the engine",
+        dest="password",
+        default=None,
+    )
+
+
+    vmg = p.add_argument_group("VM's related arguments")
+    vmg.add_argument(
+        "-a", "--all-vms",
+        help="Backup all VMs and override the list of VM's in the config "
+        "file",
+        dest="all_vms",
+        action="store_true",
+        default=False,
+    )
+    vmg.add_argument(
+        "--vm-names",
+        help="List of names which VMs should be backed up",
+        dest="vm_names",
+        default=None,
+    )
+    vmg.add_argument(
+        "--vm-middle",
+        help="Middle part for the exported VM name",
+        dest="vm_middle",
+        default=None,
+    )
+
+    dcg = p.add_argument_group("Data Centrum's related options")
+    dcg.add_argument(
+        "--export-domain",
+        help="Name of the NFS Export Domain",
+        dest="export_domain",
+        default=None,
+    )
+    dcg.add_argument(
+        "--storage-domain",
+        help="Storage domain where VMs are located",
+        dest="storage_domain",
+        default=None,
+    )
+    dcg.add_argument(
+        "--cluster-name",
+        help="Name of the cluster where VMs should be cloned",
+        dest="cluster_name",
+        default=None,
+    )
+
+    mscg = p.add_argument_group("Miscellaneous options")
+    mscg.add_argument(
+        "--snapshot-description",
+        help="Description which should be set to created snapshot",
+        dest="snapshot_description",
+        default=None,
+    )
+    mscg.add_argument(
+        "--timeout",
+        help="Timeout in seconds to wait for time consuming operation",
+        dest="timeout",
+        default=None,
+    )
+    mscg.add_argument(
+        "--backup-keep-count",
+        help="Number of days to keep backups",
+        dest="backup_keep_count",
+        default=None,
+    )
+    mscg.add_argument(
+        "--vm-name-max-length",
+        help="Limit for length of VM's name ",
+        dest="vm_name_max_length",
+        default=None,
+    )
+    mscg.add_argument(
+        "--use-short-suffix",
+        help="If set it will use short suffix for VM's name",
+        dest="use_short_suffix",
+        action="store_true",
+        default=None,
+    )
+    mscg.add_argument(
+        "--storage-space-threshold",
+        help="The number in interval (0, 1), to free space on storage domain.",
+        dest="storage_space_threshold",
+        type=float,
+        default=None,
+    )
+
+    lg = p.add_argument_group("Logging related options")
+    lg.add_argument(
+        "--logger-fmt",
+        help="This value is used to format log messages",
+        dest="logger_fmt",
+        default=None,
+    )
+    lg.add_argument(
+        "--logger-file-path",
+        help="Path to file where we to store log messages",
+        dest="logger_file_path",
+        default=None,
+    )
+    return p
+
+def arguments_to_dict(opts):
+    result = {}
+    ignored_keys = ('config_file', 'dry_run', 'debug')
+    for key, val in vars(opts).items():
+        if key in ignored_keys:
+            continue  # These doesn't have a place in config file
+        if val is not None:
+            result[key] = val
+    return result
+
 def main(argv):
-    try:
-        opts, args = getopt(argv, "hac:d")
-        debug = False
-        all_vms = False
-        if not opts:
-            usage()
-        for opt, arg in opts:
-            if (opt == "-h") or (opt == "--help"):
-                usage()
-            elif opt in ("-c"):
-                config_file = arg
-            elif opt in ("-d"):
-                debug = True
-            elif opt in ("-a"):
-                all_vms = True
-    except GetoptError:
-        usage()
+    p = create_argparser()
+    opts = p.parse_args(argv)
+    config_arguments = arguments_to_dict(opts)
 
     global config
-    config = Config(config_file, debug)
+    with opts.config_file:
+        config = Config(opts.config_file, opts.debug, config_arguments)
     initialize_logger(
-        config.get_logger_fmt(), config.get_logger_file_path(), debug,
+        config.get_logger_fmt(), config.get_logger_file_path(), opts.debug,
     )
 
     time_start = int(time.time())
@@ -67,10 +198,12 @@ def main(argv):
     connect()
 
     # Add all VM's to the config file
-    if all_vms:
+    if opts.all_vms:
         vms=api.vms.list(max=400)
-        vmlist.get_vm_list(vms,config_file)
-        config = Config(config_file, debug)
+        config.set_vm_names([vm.name for vm in vms])
+        # Update config file
+        if opts.config_file.name != "<stdin>":
+            config.write_update(opts.config_file.name)
 
     # Test if config export_domain is valid
     if api.storagedomains.get(config.get_export_domain()) is None:

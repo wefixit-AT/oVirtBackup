@@ -1,0 +1,2 @@
+argparse; python_version < '2.7'
+# ovirt-engine-sdk >= 3.6  # It is not available in pip repo

@@ -3,6 +3,7 @@ from ConfigParser import (
     NoSectionError,
     NoOptionError,
 )
+import re
 import sys
 import json
 from time import strftime
@@ -19,11 +20,17 @@ class Config(object):
     """
     Class to read the config from the config file and serve these config
     """
-    def __init__(self, config_file, debug):
+    def __init__(self, fd, debug, arguments):
         try:
-            config_parser = RawConfigParser(defaults=DEFAULTS)
-            config_parser.read(config_file)
+
+            self._cp = config_parser = RawConfigParser(defaults=DEFAULTS)
+            config_parser.readfp(fd)
+
             section = CONFIG_SECTION
+            # Update with options passed from CLI interface
+            for key, val in arguments.items():
+                if val is not None:
+                    config_parser.set(section, key, val)
             self.__vm_names = json.loads(config_parser.get(section, "vm_names"))
             self.__vm_middle = config_parser.get(section, "vm_middle")
             self.__vm_suffix = "_"
@@ -53,6 +60,12 @@ class Config(object):
 
     def get_vm_names(self):
         return self.__vm_names
+
+    def set_vm_names(self, vms):
+        self._cp.set(
+            CONFIG_SECTION, 'vm_names', json.dumps(vms)
+        )
+        self.__vm_names = vms[:]
 
     def get_vm_middle(self):
         return self.__vm_middle
@@ -129,3 +142,23 @@ class Config(object):
 
     def get_logger_file_path(self):
         return self.__logger_file_path
+
+    def write_update(self, filename):
+        """
+        This method takes name of config file and update it according
+        to updated fields.
+
+        This method doesn't want to wipe out commnents from config file.
+
+        The filename must exist.
+        """
+        # self._cp.write(fd)  # This call wipes out all comments ...
+        changeable_fields = ('vm_names',)
+        with open(filename) as fh:
+            content = fh.readlines()
+        for field in changeable_fields:
+            pattern = "^%s *[:=].*$" % field
+            value = "%s = %s\n" % (field, self._cp.get(CONFIG_SECTION, field))
+            content = [re.sub(pattern, value, line) for line in content]
+        with open(filename, 'w') as fh:
+            fh.write("".join(content))
