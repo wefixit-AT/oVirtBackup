@@ -9,11 +9,9 @@ from time import strftime
 
 
 CONFIG_SECTION = "config"
-DEFAUTLS = {
-    CONFIG_SECTION: {
-        "logger_fmt": "%(asctime)s: %(message)s",
-        "logger_file_path": None,
-    }
+DEFAULTS = {
+    "logger_fmt": "%(asctime)s: %(message)s",
+    "logger_file_path": None,
 }
 
 
@@ -23,7 +21,7 @@ class Config(object):
     """
     def __init__(self, config_file, debug):
         try:
-            config_parser = RawConfigParser(defaults=DEFAUTLS)
+            config_parser = RawConfigParser(defaults=DEFAULTS)
             config_parser.read(config_file)
             section = CONFIG_SECTION
             self.__vm_names = json.loads(config_parser.get(section, "vm_names"))
