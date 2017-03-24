@@ -39,13 +39,36 @@ def test_config_overwitten_from_cli():
 
 
 def test_config_rewrite_vm_names(tmpdir):
+    new_vms = ["new_vm1", "new_vm2"]
     p = tmpdir.join("config.cfg")
     p.write("\n".join(default_config_data))
     with p.open() as fh:
         c = Config(fh, False, dict())
     assert p.check()
-    c.set_vm_names(["new_vm1", "new_vm2"])
-    assert c.get_vm_names() == ["new_vm1", "new_vm2"]
+    c.set_vm_names(new_vms)
+    assert c.get_vm_names() == new_vms
     c.write_update(str(p))
     data = p.read()
-    assert '["new_vm1", "new_vm2"]' in data
+    assert 'vm_names = ["new_vm1", "new_vm2"]' in data
+    with p.open() as fh:
+        c = Config(fh, False, dict())
+    assert c.get_vm_names() == new_vms
+
+
+def test_config_persist_memory():
+    # Test default
+    data_stream = StringIO("\n".join(default_config_data))
+    c = Config(data_stream, False, dict())
+    assert c.get_persist_memorystate() is False
+    # Test setting from config file
+    data_stream = StringIO(
+        "\n".join(
+            default_config_data + ['persist_memorystate=True']
+        )
+    )
+    c = Config(data_stream, False, dict())
+    assert c.get_persist_memorystate() is True
+    # Test setting from CLI
+    data_stream = StringIO("\n".join(default_config_data))
+    c = Config(data_stream, False, {"persist_memorystate": True})
+    assert c.get_persist_memorystate() is True

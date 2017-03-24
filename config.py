@@ -13,6 +13,7 @@ CONFIG_SECTION = "config"
 DEFAULTS = {
     "logger_fmt": "%(asctime)s: %(message)s",
     "logger_file_path": None,
+    "persist_memorystate": "false",
 }
 
 
@@ -30,7 +31,7 @@ class Config(object):
             # Update with options passed from CLI interface
             for key, val in arguments.items():
                 if val is not None:
-                    config_parser.set(section, key, val)
+                    config_parser.set(section, key, str(val))
             self.__vm_names = json.loads(config_parser.get(section, "vm_names"))
             self.__vm_middle = config_parser.get(section, "vm_middle")
             self.__vm_suffix = "_"
@@ -51,10 +52,8 @@ class Config(object):
             self.__storage_space_threshold = config_parser.getfloat(section, "storage_space_threshold")
             self.__logger_fmt = config_parser.get(section, "logger_fmt")
             self.__logger_file_path = config_parser.get(section, "logger_file_path")
-        except NoSectionError as e:
-            print str(e)
-            sys.exit(1)
-        except NoOptionError as e:
+            self.__persist_memorystate = config_parser.getboolean(section, "persist_memorystate")
+        except (NoSectionError, NoOptionError) as e:
             print str(e)
             sys.exit(1)
 
@@ -142,6 +141,9 @@ class Config(object):
 
     def get_logger_file_path(self):
         return self.__logger_file_path
+
+    def get_persist_memorystate(self):
+        return self.__persist_memorystate
 
     def write_update(self, filename):
         """
