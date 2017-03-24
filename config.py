@@ -10,11 +10,9 @@ from time import strftime
 
 
 CONFIG_SECTION = "config"
-DEFAUTLS = {
-    CONFIG_SECTION: {
-        "logger_fmt": "%(asctime)s: %(message)s",
-        "logger_file_path": None,
-    }
+DEFAULTS = {
+    "logger_fmt": "%(asctime)s: %(message)s",
+    "logger_file_path": None,
 }
 
 
@@ -24,8 +22,10 @@ class Config(object):
     """
     def __init__(self, fd, debug, arguments):
         try:
-            self._cp = config_parser = RawConfigParser(defaults=DEFAUTLS)
+
+            self._cp = config_parser = RawConfigParser(defaults=DEFAULTS)
             config_parser.readfp(fd)
+
             section = CONFIG_SECTION
             # Update with options passed from CLI interface
             for key, val in arguments.items():
