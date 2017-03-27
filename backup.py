@@ -287,7 +287,7 @@ def main(argv):
                 continue
             snapshot_param = params.Snapshot(id=snapshots[0].id)
             snapshots_param = params.Snapshots(snapshot=[snapshot_param])
-            logger.info("Clone into VM started ...")
+            logger.info("Clone into VM (%s) started ..." % vm_clone_name)
             if not config.get_dry_run():
                 api.vms.add(params.VM(name=vm_clone_name, memory=vm.get_memory(), cluster=api.clusters.get(config.get_cluster_name()), snapshots=snapshots_param))
                 VMTools.wait_for_vm_operation(api, config, "Cloning", vm_from_list)
@@ -302,7 +302,7 @@ def main(argv):
             # Export the VM
             try:
                 vm_clone = api.vms.get(vm_clone_name)
-                logger.info("Export started ...")
+                logger.info("Export of VM (%s) started ..." % vm_clone_name)
                 if not config.get_dry_run():
                     vm_clone.export(params.Action(storage_domain=api.storagedomains.get(config.get_export_domain())))
                     VMTools.wait_for_vm_operation(api, config, "Exporting", vm_from_list)
