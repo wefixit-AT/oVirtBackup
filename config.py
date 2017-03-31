@@ -54,7 +54,10 @@ class Config(object):
             self.__logger_file_path = config_parser.get(section, "logger_file_path")
             self.__persist_memorystate = config_parser.getboolean(section, "persist_memorystate")
         except (NoSectionError, NoOptionError) as e:
-            print str(e)
+            print(str(e))
+            sys.exit(1)
+        except NoOptionError as e:
+            print(str(e))
             sys.exit(1)
 
     def get_vm_names(self):
@@ -69,72 +72,55 @@ class Config(object):
     def get_vm_middle(self):
         return self.__vm_middle
 
-
     def clear_vm_suffix(self):
         self.__vm_suffix = "_" + strftime("%Y%m%d_%H%M%S")
         if self.__use_short_suffix:
             self.__vm_suffix = "_" + strftime("%m%d%S")
 
-
     def get_vm_suffix(self):
         return self.__vm_suffix
-
 
     def get_server(self):
         return self.__server
 
-
     def get_username(self):
         return self.__username
-
 
     def get_password(self):
         return self.__password
 
-
     def get_snapshot_description(self):
         return self.__snapshot_description
-
 
     def get_cluster_name(self):
         return self.__cluster_name
 
-
     def get_export_domain(self):
         return self.__export_domain
-
 
     def get_timeout(self):
         return self.__timeout
 
-
     def get_backup_keep_count(self):
         return self.__backup_keep_count
-
 
     def get_dry_run(self):
         return self.__dry_run
 
-
     def get_debug(self):
         return self.__debug
-
 
     def get_vm_name_max_length(self):
         return self.__vm_name_max_length
 
-
     def get_use_short_suffix(self):
         return self.__use_short_suffix
-
 
     def get_storage_domain(self):
         return self.__storage_domain
 
-
     def get_storage_space_threshold(self):
         return self.__storage_space_threshold
-
 
     def get_logger_fmt(self):
         return self.__logger_fmt

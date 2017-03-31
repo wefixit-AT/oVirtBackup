@@ -25,6 +25,7 @@ def initialize_logger(logger_fmt, logger_file_path, debug):
         logger_options['filename'] = logger_file_path
     logging.basicConfig(**logger_options)
 
+
 def create_argparser():
     p = ArgumentParser()
     # General options
@@ -69,7 +70,6 @@ def create_argparser():
         dest="password",
         default=None,
     )
-
 
     vmg = p.add_argument_group("VM's related arguments")
     vmg.add_argument(
@@ -175,6 +175,7 @@ def create_argparser():
     )
     return p
 
+
 def arguments_to_dict(opts):
     result = {}
     ignored_keys = ('config_file', 'dry_run', 'debug')
@@ -184,6 +185,7 @@ def arguments_to_dict(opts):
         if val is not None:
             result[key] = val
     return result
+
 
 def main(argv):
     p = create_argparser()
@@ -206,7 +208,7 @@ def main(argv):
 
     # Add all VM's to the config file
     if opts.all_vms:
-        vms=api.vms.list(max=400)
+        vms = api.vms.list(max=400)
         config.set_vm_names([vm.name for vm in vms])
         # Update config file
         if opts.config_file.name != "<stdin>":
@@ -346,7 +348,7 @@ def main(argv):
             logger.error("!!! Got a RequestError: %s", e)
             has_errors = True
             continue
-        except  Exception as e:
+        except Exception as e:
             logger.error("!!! Got unexpected exception: %s", e)
             api.disconnect()
             sys.exit(1)
@@ -366,6 +368,7 @@ def main(argv):
     # Disconnect from the server
     api.disconnect()
 
+
 def connect():
     global api
     api = ovirtsdk.api.API(
@@ -376,5 +379,6 @@ def connect():
         debug=False
     )
 
+
 if __name__ == "__main__":
-   main(sys.argv[1:])
+    main(sys.argv[1:])

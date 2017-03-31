@@ -5,6 +5,7 @@ import datetime
 
 logger = logging.getLogger()
 
+
 class VMTools:
     """
     Class which holds static methods which are used more than once
