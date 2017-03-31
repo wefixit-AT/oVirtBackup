@@ -85,6 +85,13 @@ class VMTools:
                 logger.info("Delete cloned VM (%s) started ..." % i_vm_name)
                 if not config.get_dry_run():
                     vm = api.vms.get(i_vm_name)
+                    if vm is None:
+                        logger.warn(
+                            "The VM (%s) doesn't exist anymore, "
+                            "skipping deletion ...", i_vm_name
+                        )
+                        done = True
+                        continue
                     vm.delete_protected = False
                     vm = vm.update()
                     vm.delete()
@@ -106,8 +113,25 @@ class VMTools:
         :param config: Configuration
         :param comment: This comment will be used for debugging output
         """
-        while str(api.vms.get(vm_name + config.get_vm_middle() + config.get_vm_suffix()).get_status().state) != 'down':
-            logger.debug("%s in progress ...", comment)
+        composed_vm_name = "%s%s%s" % (
+            vm_name, config.get_vm_middle(), config.get_vm_suffix()
+        )
+        while True:
+            vm = api.vms.get(composed_vm_name)
+            if vm is None:
+                logger.warn(
+                    "The VM (%s) doesn't exist anymore, "
+                    "leaving waiting loop ...", composed_vm_name
+                )
+                break
+
+            vm_status = str(vm.get_status().state).lower()
+            if vm_status == "down":
+                break
+            logger.debug(
+                "%s in progress (VM %s status is '%s') ...",
+                comment, composed_vm_name, vm_status,
+            )
             time.sleep(config.get_timeout())
 
     @staticmethod
