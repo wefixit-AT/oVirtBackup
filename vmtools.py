@@ -79,24 +79,24 @@ class VMTools:
         i_vm_name = ""
         done = False
         try:
-            for i in api.vms.list():
+            vm_search_regexp = ("name=%s%s*" % (vm_name, config.get_vm_middle()))
+            for i in api.vms.list(query=vm_search_regexp):
                 i_vm_name = str(i.get_name())
-                if i_vm_name.startswith(vm_name + config.get_vm_middle()):
-                    logger.info("Delete cloned VM started ...")
-                    if not config.get_dry_run():
-                        vm = api.vms.get(i_vm_name)
-                        vm.delete_protected = False
-                        vm = vm.update()
-                        vm.delete()
-                        while i_vm_name in [vm.name for vm in api.vms.list()]:
-                            logger.debug("Deletion of cloned VM in progress ...")
-                            time.sleep(config.get_timeout())
-                        done = True
+                logger.info("Delete cloned VM (%s) started ..." % i_vm_name)
+                if not config.get_dry_run():
+                    vm = api.vms.get(i_vm_name)
+                    vm.delete_protected = False
+                    vm = vm.update()
+                    vm.delete()
+                    while api.vms.get(i_vm_name) is not None:
+                        logger.debug("Deletion of cloned VM (%s) in progress ..." % i_vm_name)
+                        time.sleep(config.get_timeout())
+                    done = True
         except Exception as e:
             logger.info("!!! Can't delete cloned VM (%s)", i_vm_name)
             raise e
         if done:
-            logger.info("Cloned VM deleted")
+            logger.info("Cloned VM (%s) deleted" % i_vm_name)
 
     @staticmethod
     def wait_for_vm_operation(api, config, comment, vm_name):
@@ -117,22 +117,22 @@ class VMTools:
         :param api: ovirtsdk api
         :param config: Configuration
         """
-        exported_vms = api.storagedomains.get(config.get_export_domain()).vms.list()
+        vm_search_regexp = ("name=%s%s*" % (vm_name, config.get_vm_middle()))
+        exported_vms = api.storagedomains.get(config.get_export_domain()).vms.list(query=vm_search_regexp)
         for i in exported_vms:
             vm_name_export = str(i.get_name())
-            if vm_name_export.startswith(vm_name + config.get_vm_middle()):
-                datetimeStart = datetime.datetime.combine((datetime.date.today() - datetime.timedelta(config.get_backup_keep_count())), datetime.datetime.min.time())
-                timestampStart = time.mktime(datetimeStart.timetuple())
-                datetimeCreation = i.get_creation_time()
-                datetimeCreation = datetimeCreation.replace(hour=0, minute=0, second=0)
-                timestampCreation = time.mktime(datetimeCreation.timetuple())
-                if timestampCreation < timestampStart:
-                    logger.info("Backup deletion started for backup: %s", vm_name_export)
-                    if not config.get_dry_run():
-                        i.delete()
-                        while vm_name_export in [vm.name for vm in api.storagedomains.get(config.get_export_domain()).vms.list()]:
-                            logger.debug("Delete old backup in progress ...")
-                            time.sleep(config.get_timeout())
+            datetimeStart = datetime.datetime.combine((datetime.date.today() - datetime.timedelta(config.get_backup_keep_count())), datetime.datetime.min.time())
+            timestampStart = time.mktime(datetimeStart.timetuple())
+            datetimeCreation = i.get_creation_time()
+            datetimeCreation = datetimeCreation.replace(hour=0, minute=0, second=0)
+            timestampCreation = time.mktime(datetimeCreation.timetuple())
+            if timestampCreation < timestampStart:
+                logger.info("Backup deletion started for backup: %s", vm_name_export)
+                if not config.get_dry_run():
+                    i.delete()
+                    while api.storagedomains.get(vm_name_export) is not None:
+                        logger.debug("Delete old backup (%s) in progress ..." % vm_name_export)
+                        time.sleep(config.get_timeout())
 
     @staticmethod
     def check_free_space(api, config, vm):
