@@ -1,0 +1,11 @@
+language: python
+python:
+    - "2.7"
+install:
+    - pip install tox tox-travis
+env:
+  matrix:
+    - TOXENV=py27
+    - TOXENV=pep8
+script:
+    - tox
