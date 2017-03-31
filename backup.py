@@ -152,6 +152,13 @@ def create_argparser():
         type=float,
         default=None,
     )
+    mscg.add_argument(
+        "--persist-memorystate",
+        help="If set, the VM is being paused during snapshot creation.",
+        dest="persist_memorystate",
+        action="store_true",
+        default=None,
+    )
 
     lg = p.add_argument_group("Logging related options")
     lg.add_argument(
@@ -268,7 +275,13 @@ def main(argv):
             try:
                 logger.info("Snapshot creation started ...")
                 if not config.get_dry_run():
-                    vm.snapshots.add(params.Snapshot(description=config.get_snapshot_description(), vm=vm))
+                    vm.snapshots.add(
+                        params.Snapshot(
+                            description=config.get_snapshot_description(),
+                            vm=vm,
+                            persist_memorystate=config.get_persist_memorystate(),
+                        )
+                    )
                     VMTools.wait_for_snapshot_operation(vm, config, "creation")
                 logger.info("Snapshot created")
             except Exception as e:
