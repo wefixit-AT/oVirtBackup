@@ -81,6 +81,13 @@ def create_argparser():
         default=False,
     )
     vmg.add_argument(
+        "--tag",
+        help="define the tag used to override the list of VM's that should"
+ 	" be backed up",
+	dest="vm_tag",
+     	default=False,
+    )
+    vmg.add_argument(
         "--vm-names",
         help="List of names which VMs should be backed up",
         dest="vm_names",
@@ -211,7 +218,15 @@ def main(argv):
         # Update config file
         if opts.config_file.name != "<stdin>":
             config.write_update(opts.config_file.name)
-
+    
+    # Add VM's with the tag to the vm list
+    if opts.vm_tag:
+	vms=api.vms.list(max=400, query="tag="+opts.vm_tag)
+        config.set_vm_names([vm.name for vm in vms])
+	# Update config file
+        if opts.config_file.name != "<stdin>":
+            config.write_update(opts.config_file.name)
+		
     # Test if config export_domain is valid
     if api.storagedomains.get(config.get_export_domain()) is None:
         logger.error("!!! Check the export_domain in the config")
