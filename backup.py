@@ -206,7 +206,7 @@ def main(argv):
 
     # Add all VM's to the config file
     if opts.all_vms:
-        vms=api.vms.list(max=400)
+        vms = api.vms.list(max=400)
         config.set_vm_names([vm.name for vm in vms])
         # Update config file
         if opts.config_file.name != "<stdin>":
@@ -259,11 +259,17 @@ def main(argv):
 
         logger.info("Start backup for: %s", vm_from_list)
         try:
-            # Get the VM
-            vm = api.vms.get(vm_from_list)
-
             # Cleanup: Delete the cloned VM
             VMTools.delete_vm(api, config, vm_from_list)
+
+            # Get the VM
+            vm = api.vms.get(vm_from_list)
+            if vm is None:
+                logger.warn(
+                    "The VM (%s) doesn't exist anymore, skipping backup ...",
+                    vm_from_list
+                )
+                continue
 
             # Delete old backup snapshots
             VMTools.delete_snapshots(vm, config, vm_from_list)
@@ -346,7 +352,7 @@ def main(argv):
             logger.error("!!! Got a RequestError: %s", e)
             has_errors = True
             continue
-        except  Exception as e:
+        except Exception as e:
             logger.error("!!! Got unexpected exception: %s", e)
             api.disconnect()
             sys.exit(1)
@@ -377,4 +383,4 @@ def connect():
     )
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+    main(sys.argv[1:])
