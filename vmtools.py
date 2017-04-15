@@ -141,8 +141,8 @@ class VMTools:
         :param api: ovirtsdk api
         :param config: Configuration
         """
-        vm_search_regexp = ("name=%s%s*" % (vm_name, config.get_vm_middle()))
-        exported_vms = api.storagedomains.get(config.get_export_domain()).vms.list(query=vm_search_regexp)
+        vm_search_regexp = ("%s%s*" % (vm_name, config.get_vm_middle())).encode('ascii', 'ignore')
+        exported_vms = api.storagedomains.get(config.get_export_domain()).vms.list(name=vm_search_regexp)
         for i in exported_vms:
             vm_name_export = str(i.get_name())
             datetimeStart = datetime.datetime.combine((datetime.date.today() - datetime.timedelta(config.get_backup_keep_count())), datetime.datetime.min.time())
