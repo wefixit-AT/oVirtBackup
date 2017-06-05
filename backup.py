@@ -336,7 +336,7 @@ def main(argv):
 
             # Delete old backups
             VMTools.delete_old_backups(api, config, vm_from_list)
-            VMTools.delete_old_vms(api, config, vm_from_list, config.get_destination_domain())
+            VMTools.delete_old_templates(api, config, vm_from_list)
 
 	    # Create template
 	    if config.get_backup_to_template():
