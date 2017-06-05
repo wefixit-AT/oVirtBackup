@@ -42,6 +42,7 @@ class Config(object):
             self.__snapshot_description = config_parser.get(section, "snapshot_description")
             self.__cluster_name = config_parser.get(section, "cluster_name")
             self.__export_domain = config_parser.get(section, "export_domain")
+            self.__destination_domain = config_parser.get(section, "destination_domain")
             self.__timeout = config_parser.getint(section, "timeout")
             self.__backup_keep_count = config_parser.getint(section, "backup_keep_count")
             self.__dry_run = config_parser.getboolean(section, "dry_run")
@@ -49,6 +50,8 @@ class Config(object):
             self.__vm_name_max_length = config_parser.getint(section, "vm_name_max_length")
             self.__use_short_suffix = config_parser.getboolean(section, "use_short_suffix")
             self.__storage_domain = config_parser.get(section, "storage_domain")
+            self.__backup_to_template = config_parser.getboolean(section, "backup_to_template")
+            self.__backup_to_export = config_parser.getboolean(section, "backup_to_export")
             self.__storage_space_threshold = config_parser.getfloat(section, "storage_space_threshold")
             self.__logger_fmt = config_parser.get(section, "logger_fmt")
             self.__logger_file_path = config_parser.get(section, "logger_file_path")
@@ -103,6 +106,11 @@ class Config(object):
     def get_export_domain(self):
         return self.__export_domain
 
+    def get_backup_to_template(self):
+        return self.__backup_to_template
+
+    def get_backup_to_export(self):
+        return self.__backup_to_export
 
     def get_timeout(self):
         return self.__timeout
@@ -131,6 +139,8 @@ class Config(object):
     def get_storage_domain(self):
         return self.__storage_domain
 
+    def get_destination_domain(self):
+        return self.__destination_domain
 
     def get_storage_space_threshold(self):
         return self.__storage_space_threshold

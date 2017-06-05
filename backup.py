@@ -108,6 +108,12 @@ def create_argparser():
         default=None,
     )
     dcg.add_argument(
+        "--destination-domain",
+        help="Storage domain where cloned VM are located",
+        dest="destination_domain",
+        default=None,
+    )
+    dcg.add_argument(
         "--storage-domain",
         help="Storage domain where VMs are located",
         dest="storage_domain",
@@ -245,6 +251,12 @@ def main(argv):
         api.disconnect()
         sys.exit(1)
 
+    # Test if config destination_domain is valid
+    if api.storagedomains.get(config.get_destination_domain()) is None:
+        logger.error("!!! Check the destination_domain in the config")
+        api.disconnect()
+        sys.exit(1)
+
     # Test if all VM names are valid
     for vm_from_list in config.get_vm_names():
         if not api.vms.get(vm_from_list):
@@ -255,6 +267,12 @@ def main(argv):
     # Test if config vm_middle is valid
     if not config.get_vm_middle():
         logger.error("!!! It's not valid to leave vm_middle empty")
+        api.disconnect()
+        sys.exit(1)
+
+    # Test if at least one backup type is activated
+    if not config.get_backup_to_template() and not config.get_backup_to_export():
+        logger.error("!!! Choose at least one backup type: backup_to_template and/or backup_to_export")
         api.disconnect()
         sys.exit(1)
 
@@ -293,59 +311,52 @@ def main(argv):
             VMTools.check_free_space(api, config, vm)
 
             # Create a VM snapshot:
-            try:
-                logger.info("Snapshot creation started ...")
-                if not config.get_dry_run():
-                    vm.snapshots.add(
-                        params.Snapshot(
-                            description=config.get_snapshot_description(),
-                            vm=vm,
-                            persist_memorystate=config.get_persist_memorystate(),
-                        )
-                    )
-                    VMTools.wait_for_snapshot_operation(vm, config, "creation")
-                logger.info("Snapshot created")
+	    try:
+	    	VMTools.create_snapshot(api, config, vm_from_list)
             except Exception as e:
                 logger.info("Can't create snapshot for VM: %s", vm_from_list)
                 logger.info("DEBUG: %s", e)
                 has_errors = True
-                continue
+	    	continue
+
             # Workaround for some SDK problems see issue #17
             time.sleep(10)
 
             # Clone the snapshot into a VM
-            snapshots = vm.snapshots.list(description=config.get_snapshot_description())
-            if not snapshots:
-                logger.error("!!! No snapshot found !!!")
+	    try:
+	    	VMTools.clone_snapshot(api, config, vm_from_list)
+            except Exception as e:
+                logger.info("Can't clone snapshot for VM: %s", vm_from_list)
+                logger.info("DEBUG: %s", e)
                 has_errors = True
-                continue
-            snapshot_param = params.Snapshot(id=snapshots[0].id)
-            snapshots_param = params.Snapshots(snapshot=[snapshot_param])
-            logger.info("Clone into VM (%s) started ..." % vm_clone_name)
-            if not config.get_dry_run():
-                api.vms.add(params.VM(name=vm_clone_name, memory=vm.get_memory(), cluster=api.clusters.get(config.get_cluster_name()), snapshots=snapshots_param))
-                VMTools.wait_for_vm_operation(api, config, "Cloning", vm_from_list)
-            logger.info("Cloning finished")
+	    	continue
 
             # Delete backup snapshots
             VMTools.delete_snapshots(vm, config, vm_from_list)
 
             # Delete old backups
             VMTools.delete_old_backups(api, config, vm_from_list)
+            VMTools.delete_old_vms(api, config, vm_from_list, config.get_destination_domain())
+
+	    # Create template
+	    if config.get_backup_to_template():
+	        try:
+	    	    VMTools.backup_to_template(api, config, vm_from_list)
+                except Exception as e:
+                    logger.info("Can't create template from cloned VM (%s) in domain: %s", vm_clone_name, config.get_destination_domain())
+                    logger.info("DEBUG: %s", e)
+                    has_errors = True
+                    continue
 
             # Export the VM
-            try:
-                vm_clone = api.vms.get(vm_clone_name)
-                logger.info("Export of VM (%s) started ..." % vm_clone_name)
-                if not config.get_dry_run():
-                    vm_clone.export(params.Action(storage_domain=api.storagedomains.get(config.get_export_domain())))
-                    VMTools.wait_for_vm_operation(api, config, "Exporting", vm_from_list)
-                logger.info("Exporting finished")
-            except Exception as e:
-                logger.info("Can't export cloned VM (%s) to domain: %s", vm_clone_name, config.get_export_domain())
-                logger.info("DEBUG: %s", e)
-                has_errors = True
-                continue
+	    if config.get_backup_to_export():
+	        try:
+	    	    VMTools.backup_to_export(api, config, vm_from_list)
+                except Exception as e:
+                    logger.info("Can't export cloned VM (%s) to domain: %s", vm_clone_name, config.get_export_domain())
+                    logger.info("DEBUG: %s", e)
+                    has_errors = True
+                    continue
 
             # Delete the VM
             VMTools.delete_vm(api, config, vm_from_list)
