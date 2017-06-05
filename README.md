@@ -22,10 +22,15 @@ Take a look at the example "config_example.cfg"
 ## Workflow
 
 * Create a snapshot
-* Clone the snapshot into a new VM
+* Clone the snapshot into a new VM (posibly in a different storage domain)
 * Delete the snapshot
-* Export the VM to the NFS share
+* Two differet types of backup (can use either one or both)
+  * Create a template from the cloned VM (in the same storage domain) 
+  * Export the VM to the NFS share
 * Delete the VM
+
+Backup to template can be more flexible in large instalations because you can have multiple storage domains containig backed up hosts. 
+With export based backups you can only have one export domain per datacenter
 
 ## Useful tips
 
