@@ -2,8 +2,10 @@ import logging
 import time
 import sys
 import datetime
+import operator
 
 logger = logging.getLogger()
+
 
 class VMTools:
     """
@@ -157,6 +159,26 @@ class VMTools:
                     while api.storagedomains.get(vm_name_export) is not None:
                         logger.debug("Delete old backup (%s) in progress ..." % vm_name_export)
                         time.sleep(config.get_timeout())
+
+    @staticmethod
+    def delete_old_backups_by_number(api, config, vm_name):
+        """
+        Delete old backups from the export domain by number of requested
+        :param api: ovirtsdk api
+        :param config: Configuration
+        """
+        vm_search_regexp = ("%s%s*" % (vm_name, config.get_vm_middle())).encode('ascii', 'ignore')
+        exported_vms = api.storagedomains.get(config.get_export_domain()).vms.list(name=vm_search_regexp)
+        exported_vms.sort(key=lambda x: x.get_creation_time())
+        while len(exported_vms) > config.get_backup_keep_count_by_number():
+            i = exported_vms.pop(0)
+            vm_name_export = str(i.get_name())
+            logger.info("Backup deletion started for backup: %s", vm_name_export)
+            if not config.get_dry_run():
+                i.delete()
+                while api.storagedomains.get(vm_name_export) is not None:
+                    logger.debug("Delete old backup (%s) in progress ..." % vm_name_export)
+                    time.sleep(config.get_timeout())
 
     @staticmethod
     def check_free_space(api, config, vm):

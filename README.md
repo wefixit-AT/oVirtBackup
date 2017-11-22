@@ -24,6 +24,7 @@ Take a look at the example "config_example.cfg"
 * Create a snapshot
 * Clone the snapshot into a new VM
 * Delete the snapshot
+* Delete previous backups (if set)
 * Export the VM to the NFS share
 * Delete the VM
 
