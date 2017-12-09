@@ -331,7 +331,10 @@ def main(argv):
             VMTools.delete_snapshots(vm, config, vm_from_list)
 
             # Delete old backups
-            VMTools.delete_old_backups(api, config, vm_from_list)
+            if (config.get_backup_keep_count()):
+                VMTools.delete_old_backups(api, config, vm_from_list)
+            if (config.get_backup_keep_count_by_number()):
+                VMTools.delete_old_backups_by_number(api, config, vm_from_list)
 
             # Export the VM
             try:

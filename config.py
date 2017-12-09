@@ -23,7 +23,6 @@ class Config(object):
     """
     def __init__(self, fd, debug, arguments):
         try:
-
             self._cp = config_parser = RawConfigParser(defaults=DEFAULTS)
             config_parser.readfp(fd)
 
@@ -32,6 +31,7 @@ class Config(object):
             for key, val in arguments.items():
                 if val is not None:
                     config_parser.set(section, key, str(val))
+
             self.__vm_names = json.loads(config_parser.get(section, "vm_names"))
             self.__vm_middle = config_parser.get(section, "vm_middle")
             self.__vm_suffix = "_"
@@ -43,7 +43,8 @@ class Config(object):
             self.__cluster_name = config_parser.get(section, "cluster_name")
             self.__export_domain = config_parser.get(section, "export_domain")
             self.__timeout = config_parser.getint(section, "timeout")
-            self.__backup_keep_count = config_parser.getint(section, "backup_keep_count")
+            self.__backup_keep_count = config_parser.get(section, "backup_keep_count")
+            self.__backup_keep_count_by_number = config_parser.get(section, "backup_keep_count_by_number")
             self.__dry_run = config_parser.getboolean(section, "dry_run")
             self.__debug = debug
             self.__vm_name_max_length = config_parser.getint(section, "vm_name_max_length")
@@ -109,7 +110,15 @@ class Config(object):
 
 
     def get_backup_keep_count(self):
+        if self.__backup_keep_count:
+            self.__backup_keep_count = int(self.__backup_keep_count)
         return self.__backup_keep_count
+
+
+    def get_backup_keep_count_by_number(self):
+        if self.__backup_keep_count_by_number:
+            self.__backup_keep_count_by_number = int(self.__backup_keep_count_by_number)
+        return self.__backup_keep_count_by_number
 
 
     def get_dry_run(self):
