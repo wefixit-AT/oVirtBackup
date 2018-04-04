@@ -198,3 +198,27 @@ class VMTools:
         vm_size *= (1 + storage_space_threshold)
         if (sd.available - vm_size) <= 0:
             raise Exception("!!! The is not enough free storage on the storage domain '%s' available to backup the VM '%s'" % (config.get_storage_domain(), vm.name))
+
+    @staticmethod
+    def check_storage_domain_status(api, data_center, storage_domain):
+        """
+        Check the state of the export domain
+        :param api: ovirt api module
+        :param data_center: data center name where the storage domain attached
+        :param storage_domain: storage domain name
+        :return: True if 'active'
+        :raises: Exception if storage domain is not 'active'
+        """
+        dc = api.datacenters.get(name=data_center)
+        sd = dc.storagedomains.get(name=storage_domain)
+        sd_state = sd.get_status().state
+        info_msg = (
+            "The storage domain {0} is in state {1}".format(
+                storage_domain, sd_state
+            )
+        )
+        if sd_state == 'active':
+            logger.info(info_msg)
+            return True
+
+        raise Exception(info_msg)
