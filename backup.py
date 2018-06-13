@@ -83,9 +83,9 @@ def create_argparser():
     vmg.add_argument(
         "--tag",
         help="define the tag used to override the list of VM's that should"
- 	" be backed up",
-	dest="vm_tag",
-     	default=False,
+        " be backed up",
+        dest="vm_tag",
+        default=False,
     )
     vmg.add_argument(
         "--vm-names",
@@ -105,12 +105,6 @@ def create_argparser():
         "--export-domain",
         help="Name of the NFS Export Domain",
         dest="export_domain",
-        default=None,
-    )
-    dcg.add_argument(
-        "--storage-domain",
-        help="Storage domain where VMs are located",
-        dest="storage_domain",
         default=None,
     )
     dcg.add_argument(
@@ -218,15 +212,15 @@ def main(argv):
         # Update config file
         if opts.config_file.name != "<stdin>":
             config.write_update(opts.config_file.name)
-    
+
     # Add VM's with the tag to the vm list
     if opts.vm_tag:
-	vms=api.vms.list(max=400, query="tag="+opts.vm_tag)
+        vms=api.vms.list(max=400, query="tag="+opts.vm_tag)
         config.set_vm_names([vm.name for vm in vms])
-	# Update config file
+        # Update config file
         if opts.config_file.name != "<stdin>":
             config.write_update(opts.config_file.name)
-		
+
     # Test if config export_domain is valid
     if api.storagedomains.get(config.get_export_domain()) is None:
         logger.error("!!! Check the export_domain in the config")
@@ -236,12 +230,6 @@ def main(argv):
     # Test if config cluster_name is valid
     if api.clusters.get(config.get_cluster_name()) is None:
         logger.error("!!! Check the cluster_name in the config")
-        api.disconnect()
-        sys.exit(1)
-
-    # Test if config storage_domain is valid
-    if api.storagedomains.get(config.get_storage_domain()) is None:
-        logger.error("!!! Check the storage_domain in the config")
         api.disconnect()
         sys.exit(1)
 
@@ -261,6 +249,18 @@ def main(argv):
     vms_with_failures = list(config.get_vm_names())
 
     for vm_from_list in config.get_vm_names():
+        if vm_from_list in config.get_vm_names_to_exclude():
+            logger.info("VM %s excluded from backup [in exclusion list]", vm_from_list)
+            continue
+
+        if VMTools.is_stateless_vm(api, vm_from_list):
+            if config.get_exclude_stateless_vm():
+                logger.info("VM %s excluded from backup [stateless vm]", vm_from_list)
+                continue
+            elif not VMTools.is_stopped_vm(api, vm_from_list):
+                logger.info("VM %s excluded from backup [not stopped stateless vm]", vm_from_list)
+                continue
+
         config.clear_vm_suffix()
         vm_clone_name = vm_from_list + config.get_vm_middle() + config.get_vm_suffix()
 
@@ -290,7 +290,14 @@ def main(argv):
             VMTools.delete_snapshots(vm, config, vm_from_list)
 
             # Check free space on the storage
-            VMTools.check_free_space(api, config, vm)
+            space_errors = VMTools.check_free_space(api, config, vm)
+            if space_errors is not None:
+                logger.error("!!! Can't backup VM (%s)", vm_from_list)
+                for error in space_errors:
+                    logger.error(error)
+
+                has_errors = True
+                continue
 
             # Create a VM snapshot:
             try:

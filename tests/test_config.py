@@ -17,7 +17,6 @@ default_config_data = [
     "dry_run=False",
     "vm_name_max_length=32",
     "use_short_suffix=False",
-    "storage_domain=storage",
     "storage_space_threshold=0.1",
     "logger_fmt=%(asctime)s: %(message)s",
     "logger_file_path=",

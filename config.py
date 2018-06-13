@@ -33,6 +33,9 @@ class Config(object):
                     config_parser.set(section, key, str(val))
 
             self.__vm_names = json.loads(config_parser.get(section, "vm_names"))
+            self.__vm_names_to_exclude = json.loads(config_parser.get(section, "vm_names_to_exclude"))
+            self.__exclude_stateless_vm = config_parser.getboolean(section, "exclude_stateless_vm")
+            self.__max_image_size = config_parser.getint(section, "max_image_size")
             self.__vm_middle = config_parser.get(section, "vm_middle")
             self.__vm_suffix = "_"
             self.clear_vm_suffix
@@ -49,7 +52,6 @@ class Config(object):
             self.__debug = debug
             self.__vm_name_max_length = config_parser.getint(section, "vm_name_max_length")
             self.__use_short_suffix = config_parser.getboolean(section, "use_short_suffix")
-            self.__storage_domain = config_parser.get(section, "storage_domain")
             self.__storage_space_threshold = config_parser.getfloat(section, "storage_space_threshold")
             self.__logger_fmt = config_parser.get(section, "logger_fmt")
             self.__logger_file_path = config_parser.get(section, "logger_file_path")
@@ -66,6 +68,17 @@ class Config(object):
             CONFIG_SECTION, 'vm_names', json.dumps(vms)
         )
         self.__vm_names = vms[:]
+
+    def get_vm_names_to_exclude(self):
+        return self.__vm_names_to_exclude
+
+    def get_exclude_stateless_vm(self):
+        return self.__exclude_stateless_vm
+
+
+    def get_max_image_size(self):
+        return self.__max_image_size
+
 
     def get_vm_middle(self):
         return self.__vm_middle
@@ -135,10 +148,6 @@ class Config(object):
 
     def get_use_short_suffix(self):
         return self.__use_short_suffix
-
-
-    def get_storage_domain(self):
-        return self.__storage_domain
 
 
     def get_storage_space_threshold(self):

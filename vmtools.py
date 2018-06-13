@@ -181,20 +181,74 @@ class VMTools:
                     time.sleep(config.get_timeout())
 
     @staticmethod
+    def sd_size_available(api, disks, storage_space_threshold, max_image_size):
+        """
+        Check if there is enough space available to backup one or more disks taking into
+        account to which storage domain they belong
+        """
+        sd_available = {}
+        sd_required = {}
+        errors = []
+
+        for disk in disks:
+            if disk.get_storage_type() != 'image':
+                continue
+
+            if max_image_size > 0 and disk.size > max_image_size:
+                errors.append("     !!! Disk size [%s] for %s : %s is bigger than allowed [%s]" % (disk.size, disk.get_name(), disk.get_id(), max_image_size))
+                continue
+
+            calculated = False
+            for sd in api.storagedomains.list():
+                sd_available[sd.get_name()] = sd.available
+                for sd_disk in sd.disks.list():
+                    if disk.get_id() == sd_disk.get_id():
+                        sd_required[sd.get_name()] = sd_required.get(sd.get_name(), 0) + (disk.size or 0)
+                        calculated = True
+                        break
+                if calculated:
+                    break
+            if not calculated:
+                errors.append("     !!! Can't get storage domain for disk %s : %s" % (disk.get_name(), disk.get_id()))
+
+        for k,v in sd_required.iteritems():
+            if v * (1 + storage_space_threshold) >= sd_available[k]:
+                errors.append("     !!! The is not enough free storage on the storage domain '%s'" % k)
+
+        return errors or None
+
+    @staticmethod
     def check_free_space(api, config, vm):
         """
         Check if the summarized size of all VM disks is available on the storagedomain
         to avoid running out of space
         """
-        sd = api.storagedomains.get(config.get_storage_domain())
-        vm_size = 0
-        for disk in vm.disks.list():
-            # For safety reason "vm.actual_size" is not used
-            if disk.size is not None:
-                vm_size += disk.size
         storage_space_threshold = 0
         if config.get_storage_space_threshold() > 0:
             storage_space_threshold = config.get_storage_space_threshold()
-        vm_size *= (1 + storage_space_threshold)
-        if (sd.available - vm_size) <= 0:
-            raise Exception("!!! The is not enough free storage on the storage domain '%s' available to backup the VM '%s'" % (config.get_storage_domain(), vm.name))
+
+        max_image_size = -1
+        if config.get_max_image_size() > max_image_size:
+            max_image_size = config.get_max_image_size()
+
+        errors = VMTools.sd_size_available(api, vm.disks.list(), storage_space_threshold, max_image_size)
+
+        return errors or None
+
+    @staticmethod
+    def is_stateless_vm(api, vm_name):
+        vm = api.vms.get(vm_name)
+
+        if vm is not None:
+            return vm.get_stateless()
+
+        return False
+
+    @staticmethod
+    def is_stopped_vm(api, vm_name):
+        vm = api.vms.get(vm_name)
+
+        if vm is not None:
+            return vm.get_status().state == 'down'
+
+        return False
