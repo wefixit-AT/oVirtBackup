@@ -178,7 +178,7 @@ class Config(object):
             content = fh.readlines()
         for field in changeable_fields:
             pattern = "^%s *[:=].*$" % field
-            value = "%s = %s\n" % (field, self._cp.get(CONFIG_SECTION, field))
+            value = "%s = %s" % (field, self._cp.get(CONFIG_SECTION, field))
             content = [re.sub(pattern, value, line) for line in content]
         with open(filename, 'w') as fh:
             fh.write("".join(content))
