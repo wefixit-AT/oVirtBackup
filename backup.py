@@ -108,6 +108,12 @@ def create_argparser():
         default=None,
     )
     dcg.add_argument(
+        "--datacenter-name",
+        help="Datacenter where export domain is attached",
+        dest="datacenter_name",
+        default=None,
+    )
+    dcg.add_argument(
         "--storage-domain",
         help="Storage domain where VMs are located",
         dest="storage_domain",
@@ -218,15 +224,19 @@ def main(argv):
         # Update config file
         if opts.config_file.name != "<stdin>":
             config.write_update(opts.config_file.name)
-    
     # Add VM's with the tag to the vm list
     if opts.vm_tag:
-	vms=api.vms.list(max=400, query="tag="+opts.vm_tag)
+        vms=api.vms.list(max=400, query="tag="+opts.vm_tag)
         config.set_vm_names([vm.name for vm in vms])
-	# Update config file
+        # Update config file
         if opts.config_file.name != "<stdin>":
             config.write_update(opts.config_file.name)
-		
+
+    # Test if data center is valid
+    if api.datacenters.get(config.get_datacenter_name()) is None:
+        logger.error("!!! Check the datacenter_name in the config")
+        api.disconnect()
+        sys.exit(1)
     # Test if config export_domain is valid
     if api.storagedomains.get(config.get_export_domain()) is None:
         logger.error("!!! Check the export_domain in the config")
@@ -274,6 +284,11 @@ def main(argv):
 
         logger.info("Start backup for: %s", vm_from_list)
         try:
+            VMTools.check_storage_domain_status(
+                api,
+                config.get_datacenter_name(),
+                config.get_export_domain()
+            )
             # Cleanup: Delete the cloned VM
             VMTools.delete_vm(api, config, vm_from_list)
 

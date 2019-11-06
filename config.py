@@ -41,6 +41,7 @@ class Config(object):
             self.__password = config_parser.get(section, "password")
             self.__snapshot_description = config_parser.get(section, "snapshot_description")
             self.__cluster_name = config_parser.get(section, "cluster_name")
+            self.__datacenter_name = config_parser.get(section, "datacenter_name")
             self.__export_domain = config_parser.get(section, "export_domain")
             self.__timeout = config_parser.getint(section, "timeout")
             self.__backup_keep_count = config_parser.get(section, "backup_keep_count")
@@ -100,6 +101,8 @@ class Config(object):
     def get_cluster_name(self):
         return self.__cluster_name
 
+    def get_datacenter_name(self):
+        return self.__datacenter_name
 
     def get_export_domain(self):
         return self.__export_domain
