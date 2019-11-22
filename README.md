@@ -19,6 +19,8 @@ Take a look at the usage text.
 
 Take a look at the example "config_example.cfg"
 
+Please avoid Cirillic symbols in the configuration otherwise you will get an exception see [#59](https://github.com/wefixit-AT/oVirtBackup/issues/59)
+
 ## Workflow
 
 * Create a snapshot
