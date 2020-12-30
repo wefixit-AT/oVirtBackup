@@ -1,9 +1,8 @@
 #!/usr/bin/python
 import logging
 from argparse import ArgumentParser, FileType
-import ovirtsdk.api
-from ovirtsdk.xml import params
-from ovirtsdk.infrastructure import errors
+import ovirtsdk4 as sdk
+import ovirtsdk4.types as types
 import sys
 import time
 from vmtools import VMTools
@@ -217,58 +216,70 @@ def main(argv):
     # Connect to server
     connect()
 
+    system_service=api.system_service()
+
+    # Test if data center is valid
+    # Retrieve the data center service:
+    if  system_service.data_centers_service().list(search='name=%s' % config.get_datacenter_name() )[0] is None:
+        logger.error("!!! Check the datacenter_name in the config")
+        api.close()
+        sys.exit(1)
+    # Test if config export_domain is valid
+    if system_service.storage_domains_service().list(search='name=%s' % config.get_export_domain() )[0] is None:
+        logger.error("!!! Check the export_domain in the config " + config.get_export_domain())
+        api.close()
+        sys.exit(1)
+
+    # Test if config cluster_name is valid
+    if system_service.clusters_service().list(search='name=%s' % config.get_cluster_name() )[0] is None:
+        logger.error("!!! Check the cluster_name in the config")
+        api.close()
+        sys.exit(1)
+
+    # Test if config storage_domain is valid
+    if system_service.storage_domains_service().list(search='name=%s' % config.get_storage_domain() )[0] is None:
+        logger.error("!!! Check the storage_domain in the config")
+        api.close()
+        sys.exit(1)
+
+    vms_service=system_service.vms_service()
+
     # Add all VM's to the config file
     if opts.all_vms:
-        vms = api.vms.list(max=400)
+        vms = vms_service.list(max=400)
         config.set_vm_names([vm.name for vm in vms])
         # Update config file
         if opts.config_file.name != "<stdin>":
             config.write_update(opts.config_file.name)
     # Add VM's with the tag to the vm list
     if opts.vm_tag:
-        vms=api.vms.list(max=400, query="tag="+opts.vm_tag)
+        vms = vms_service.list(max=400, query="tag="+opts.vm_tag)
         config.set_vm_names([vm.name for vm in vms])
         # Update config file
         if opts.config_file.name != "<stdin>":
             config.write_update(opts.config_file.name)
 
-    # Test if data center is valid
-    if api.datacenters.get(config.get_datacenter_name()) is None:
-        logger.error("!!! Check the datacenter_name in the config")
-        api.disconnect()
-        sys.exit(1)
-    # Test if config export_domain is valid
-    if api.storagedomains.get(config.get_export_domain()) is None:
-        logger.error("!!! Check the export_domain in the config")
-        api.disconnect()
-        sys.exit(1)
-
-    # Test if config cluster_name is valid
-    if api.clusters.get(config.get_cluster_name()) is None:
-        logger.error("!!! Check the cluster_name in the config")
-        api.disconnect()
-        sys.exit(1)
-
-    # Test if config storage_domain is valid
-    if api.storagedomains.get(config.get_storage_domain()) is None:
-        logger.error("!!! Check the storage_domain in the config")
-        api.disconnect()
-        sys.exit(1)
-
     # Test if all VM names are valid
     for vm_from_list in config.get_vm_names():
-        if not api.vms.get(vm_from_list):
+        if vms_service.list(search='name=%s' % vm_from_list) is None:
             logger.error("!!! There are no VM with the following name in your cluster: %s", vm_from_list)
-            api.disconnect()
+            api.close()
             sys.exit(1)
 
     # Test if config vm_middle is valid
     if not config.get_vm_middle():
         logger.error("!!! It's not valid to leave vm_middle empty")
-        api.disconnect()
+        api.close()
         sys.exit(1)
 
     vms_with_failures = list(config.get_vm_names())
+
+
+    dcs_service = system_service.data_centers_service()
+    dc = dcs_service.list(search='name=%s' % config.get_datacenter_name() )[0]
+    dc_service = dcs_service.data_center_service(dc.id)
+    sds_service = dc_service.storage_domains_service()
+    sd_service = sds_service.list(search='name=%s' % config.get_export_domain())[0]
 
     for vm_from_list in config.get_vm_names():
         config.clear_vm_suffix()
@@ -279,7 +290,7 @@ def main(argv):
         if length > config.get_vm_name_max_length():
             logger.error("!!! VM name with middle and suffix are to long (size: %s, allowed %s) !!!", length, config.get_vm_name_max_length())
             logger.info("VM name: %s", vm_clone_name)
-            api.disconnect()
+            api.close()
             sys.exit(1)
 
         logger.info("Start backup for: %s", vm_from_list)
@@ -293,16 +304,18 @@ def main(argv):
             VMTools.delete_vm(api, config, vm_from_list)
 
             # Get the VM
-            vm = api.vms.get(vm_from_list)
-            if vm is None:
+            vm = vms_service.list(search='name=%s' % vm_from_list) 
+            if len(vm) == 0 :
                 logger.warn(
                     "The VM (%s) doesn't exist anymore, skipping backup ...",
                     vm_from_list
                 )
                 continue
 
+            vm=vm[0]
+
             # Delete old backup snapshots
-            VMTools.delete_snapshots(vm, config, vm_from_list)
+            VMTools.delete_snapshots(api, vm, config, vm_from_list)
 
             # Check free space on the storage
             VMTools.check_free_space(api, config, vm)
@@ -310,15 +323,16 @@ def main(argv):
             # Create a VM snapshot:
             try:
                 logger.info("Snapshot creation started ...")
+                snapshots_service = vms_service.vm_service(vm.id).snapshots_service()
                 if not config.get_dry_run():
-                    vm.snapshots.add(
-                        params.Snapshot(
+                    # Add the new snapshot:
+                    snapshots_service.add(
+                        types.Snapshot(
                             description=config.get_snapshot_description(),
-                            vm=vm,
                             persist_memorystate=config.get_persist_memorystate(),
-                        )
+                        ),
                     )
-                    VMTools.wait_for_snapshot_operation(vm, config, "creation")
+                    VMTools.wait_for_snapshot_operation(api,vm, config, "creation")
                 logger.info("Snapshot created")
             except Exception as e:
                 logger.info("Can't create snapshot for VM: %s", vm_from_list)
@@ -326,24 +340,51 @@ def main(argv):
                 has_errors = True
                 continue
             # Workaround for some SDK problems see issue #17
-            time.sleep(10)
+            time.sleep(config.get_timeout())
 
             # Clone the snapshot into a VM
-            snapshots = vm.snapshots.list(description=config.get_snapshot_description())
-            if not snapshots:
+            snapshots = snapshots_service.list()
+            snap = None
+            for i in snapshots:
+                if i.description == config.get_snapshot_description():
+                    snap=i
+
+            if not snap:
                 logger.error("!!! No snapshot found !!!")
                 has_errors = True
                 continue
-            snapshot_param = params.Snapshot(id=snapshots[0].id)
-            snapshots_param = params.Snapshots(snapshot=[snapshot_param])
+
             logger.info("Clone into VM (%s) started ..." % vm_clone_name)
             if not config.get_dry_run():
-                api.vms.add(params.VM(name=vm_clone_name, memory=vm.get_memory(), cluster=api.clusters.get(config.get_cluster_name()), snapshots=snapshots_param))
-                VMTools.wait_for_vm_operation(api, config, "Cloning", vm_from_list)
+                cloned_vm = vms_service.add(
+                    vm=types.Vm(
+                    name=vm_clone_name, 
+                    memory=vm.memory,
+                    snapshots=[
+                        types.Snapshot(
+                            id=snap.id
+                        )
+                    ],
+                    cluster=types.Cluster(
+                        name=config.get_cluster_name()
+                        )
+                    )
+                )
+                # Find the service that manages the cloned virtual machine:
+                cloned_vm_service = vms_service.vm_service(cloned_vm.id)
+                # Wait till the virtual machine is down, as that means that the creation
+                # of the disks of the virtual machine has been completed:
+                while True:
+                    time.sleep(config.get_timeout())
+                    logger.debug("Cloning into VM (%s) in progress ..." % vm_clone_name)
+                    cloned_vm = cloned_vm_service.get()
+                    if cloned_vm.status == types.VmStatus.DOWN:
+                         break
+
             logger.info("Cloning finished")
 
             # Delete backup snapshots
-            VMTools.delete_snapshots(vm, config, vm_from_list)
+            VMTools.delete_snapshots(api, vm, config, vm_from_list)
 
             # Delete old backups
             if (config.get_backup_keep_count()):
@@ -353,11 +394,23 @@ def main(argv):
 
             # Export the VM
             try:
-                vm_clone = api.vms.get(vm_clone_name)
+                vm_clone = api.system_service().vms_service().list(search='name=%s' % vm_clone_name)[0]
                 logger.info("Export of VM (%s) started ..." % vm_clone_name)
                 if not config.get_dry_run():
-                    vm_clone.export(params.Action(storage_domain=api.storagedomains.get(config.get_export_domain())))
-                    VMTools.wait_for_vm_operation(api, config, "Exporting", vm_from_list)
+                    cloned_vm_service = vms_service.vm_service(vm_clone.id)
+                    cloned_vm_service.export(
+                        exclusive=True,
+                        discard_snapshots=True,
+                        storage_domain=types.StorageDomain(
+                            name=config.get_export_domain()
+                        )
+                    )
+                    while True:
+                        time.sleep(config.get_timeout())
+                        cloned_vm = cloned_vm_service.get()
+                        if cloned_vm.status == types.VmStatus.DOWN:
+                            break
+
                 logger.info("Exporting finished")
             except Exception as e:
                 logger.info("Can't export cloned VM (%s) to domain: %s", vm_clone_name, config.get_export_domain())
@@ -365,7 +418,7 @@ def main(argv):
                 has_errors = True
                 continue
 
-            # Delete the VM
+            # Delete the CLONED VM
             VMTools.delete_vm(api, config, vm_from_list)
 
             time_end = int(time.time())
@@ -377,17 +430,9 @@ def main(argv):
             logger.info("VM exported as %s", vm_clone_name)
             logger.info("Backup done for: %s", vm_from_list)
             vms_with_failures.remove(vm_from_list)
-        except errors.ConnectionError as e:
-            logger.error("!!! Can't connect to the server %s", e)
-            connect()
-            continue
-        except errors.RequestError as e:
-            logger.error("!!! Got a RequestError: %s", e)
-            has_errors = True
-            continue
         except Exception as e:
             logger.error("!!! Got unexpected exception: %s", e)
-            api.disconnect()
+            api.close()
             sys.exit(1)
 
     logger.info("All backups done")
@@ -399,21 +444,21 @@ def main(argv):
 
     if has_errors:
         logger.info("Some errors occured during the backup, please check the log file")
-        api.disconnect()
+        api.close()
         sys.exit(1)
 
     # Disconnect from the server
-    api.disconnect()
+    api.close()
 
 def connect():
     global api
-    api = ovirtsdk.api.API(
-        url=config.get_server(),
-        username=config.get_username(),
-        password=config.get_password(),
-        insecure=True,
-        debug=False
-    )
+    api = sdk.Connection(
+            url=config.get_server(),
+            username=config.get_username(),
+            password=config.get_password(),
+            insecure=True,
+            debug=False
+            )
 
 if __name__ == "__main__":
     main(sys.argv[1:])

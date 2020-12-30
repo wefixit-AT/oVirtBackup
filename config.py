@@ -1,4 +1,4 @@
-from ConfigParser import (
+from configparser import (
     RawConfigParser,
     NoSectionError,
     NoOptionError,
@@ -56,7 +56,7 @@ class Config(object):
             self.__logger_file_path = config_parser.get(section, "logger_file_path")
             self.__persist_memorystate = config_parser.getboolean(section, "persist_memorystate")
         except (NoSectionError, NoOptionError) as e:
-            print str(e)
+            print (str(e))
             sys.exit(1)
 
     def get_vm_names(self):
