@@ -2,6 +2,8 @@
 
 This is a tool, written in Python, to make **online** fullbackup's of a VM which runs in an oVirt environment.
 
+**WARNING: This release has to be tested with oVirt 4.4. For oVirt 4.3 please take a look the the branches.**
+
 ## Requirements
 
 It is necessary to install the oVirt Python-sdk.
