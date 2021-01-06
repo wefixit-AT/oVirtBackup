@@ -42,12 +42,14 @@ Environment
 * selinux enforcing
 * Python 2.7.5
 
-	git clone https://github.com/wefixit-AT/oVirtBackup.git /opt/oVirtBackup.git
-	yum install https://resources.ovirt.org/pub/yum-repo/ovirt-release43.rpm
-	yum install python-ovirt-engine-sdk4
-	yum install python-configparser
-	mkdir /etc/oVirtBackup
-	cp /opt/oVirtBackup.git/config_example.cfg /etc/oVirtBackup/config.cfg
+```console
+git clone https://github.com/wefixit-AT/oVirtBackup.git /opt/oVirtBackup.git
+yum install https://resources.ovirt.org/pub/yum-repo/ovirt-release43.rpm
+yum install python-ovirt-engine-sdk4
+yum install python-configparser
+mkdir /etc/oVirtBackup
+cp /opt/oVirtBackup.git/config_example.cfg /etc/oVirtBackup/config.cfg
+```
 
 Prepare /etc/oVirtBackup/config.cfg
 
