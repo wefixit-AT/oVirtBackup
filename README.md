@@ -34,9 +34,7 @@ Please avoid Cirillic symbols in the configuration otherwise you will get an exc
 
 ## Installation
 
-### CentOS 7
-
-Environment
+Environment:
 
 * CentOS 7.9.2009
 * selinux enforcing
