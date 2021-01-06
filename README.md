@@ -4,6 +4,8 @@ This is a tool, written in Python, to make **online** fullbackup's of a VM which
 
 ## Requirements
 
+This release was tested on oVirt 4.3
+
 It is necessary to install the oVirt Python-sdk.
 In addition when running Pyhon < 2.7 you need you install argparse.
 
@@ -29,6 +31,27 @@ Please avoid Cirillic symbols in the configuration otherwise you will get an exc
 * Delete previous backups (if set)
 * Export the VM to the NFS share
 * Delete the VM
+
+## Installation
+
+### CentOS 7
+
+Environment
+
+* CentOS 7.9.2009
+* selinux enforcing
+* Python 2.7.5
+
+	git clone https://github.com/wefixit-AT/oVirtBackup.git /opt/oVirtBackup.git
+	yum install https://resources.ovirt.org/pub/yum-repo/ovirt-release43.rpm
+	yum install python-ovirt-engine-sdk4
+	yum install python-configparser
+	mkdir /etc/oVirtBackup
+	cp /opt/oVirtBackup.git/config_example.cfg /etc/oVirtBackup/config.cfg
+
+Prepare /etc/oVirtBackup/config.cfg
+
+	/opt/oVirtBackup.git/backup.py -c /etc/oVirtBackup/config.cfg
 
 ## Useful tips
 

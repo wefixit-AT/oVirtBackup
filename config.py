@@ -83,7 +83,7 @@ class Config(object):
 
 
     def get_server(self):
-        return self.__server
+        return str(self.__server)
 
 
     def get_username(self):
@@ -99,13 +99,13 @@ class Config(object):
 
 
     def get_cluster_name(self):
-        return self.__cluster_name
+        return str(self.__cluster_name)
 
     def get_datacenter_name(self):
-        return self.__datacenter_name
+        return str(self.__datacenter_name)
 
     def get_export_domain(self):
-        return self.__export_domain
+        return str(self.__export_domain)
 
 
     def get_timeout(self):
@@ -141,7 +141,7 @@ class Config(object):
 
 
     def get_storage_domain(self):
-        return self.__storage_domain
+        return str(self.__storage_domain)
 
 
     def get_storage_space_threshold(self):

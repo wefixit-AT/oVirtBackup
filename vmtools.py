@@ -92,7 +92,7 @@ class VMTools:
         done = False
         try:
             vms_service = api.system_service().vms_service()
-            vm_search_regexp = ("name=%s%s*" % (vm_name, config.get_vm_middle()))
+            vm_search_regexp = str("'name=%s%s*'" % (vm_name, config.get_vm_middle()))
             for vm in vms_service.list(search=vm_search_regexp):
                 logger.info("Delete cloned VM (%s) started ..." % vm.name)
                 if not config.get_dry_run():

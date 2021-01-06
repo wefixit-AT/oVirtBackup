@@ -261,7 +261,7 @@ def main(argv):
 
     # Test if all VM names are valid
     for vm_from_list in config.get_vm_names():
-        if vms_service.list(search='name=%s' % vm_from_list) is None:
+        if vms_service.list(search='name=%s' % str(vm_from_list)) is None:
             logger.error("!!! There are no VM with the following name in your cluster: %s", vm_from_list)
             api.close()
             sys.exit(1)
@@ -304,7 +304,8 @@ def main(argv):
             VMTools.delete_vm(api, config, vm_from_list)
 
             # Get the VM
-            vm = vms_service.list(search='name=%s' % vm_from_list) 
+            vm = vms_service.list(search='name=%s' % str(vm_from_list))
+            logger.info("TEST")
             if len(vm) == 0 :
                 logger.warn(
                     "The VM (%s) doesn't exist anymore, skipping backup ...",
@@ -394,7 +395,7 @@ def main(argv):
 
             # Export the VM
             try:
-                vm_clone = api.system_service().vms_service().list(search='name=%s' % vm_clone_name)[0]
+                vm_clone = api.system_service().vms_service().list(search='name=%s' % str(vm_clone_name))[0]
                 logger.info("Export of VM (%s) started ..." % vm_clone_name)
                 if not config.get_dry_run():
                     cloned_vm_service = vms_service.vm_service(vm_clone.id)
