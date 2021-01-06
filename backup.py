@@ -305,7 +305,6 @@ def main(argv):
 
             # Get the VM
             vm = vms_service.list(search='name=%s' % str(vm_from_list))
-            logger.info("TEST")
             if len(vm) == 0 :
                 logger.warn(
                     "The VM (%s) doesn't exist anymore, skipping backup ...",

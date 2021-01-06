@@ -69,7 +69,7 @@ class Config(object):
         self.__vm_names = vms[:]
 
     def get_vm_middle(self):
-        return self.__vm_middle
+        return str(self.__vm_middle)
 
 
     def clear_vm_suffix(self):
