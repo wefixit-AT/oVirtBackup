@@ -253,7 +253,7 @@ def main(argv):
             config.write_update(opts.config_file.name)
     # Add VM's with the tag to the vm list
     if opts.vm_tag:
-        vms = vms_service.list(max=400, query="tag="+opts.vm_tag)
+        vms = vms_service.list(max=400, search="tag="+opts.vm_tag)
         config.set_vm_names([vm.name for vm in vms])
         # Update config file
         if opts.config_file.name != "<stdin>":
