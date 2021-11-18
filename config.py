@@ -47,6 +47,9 @@ class Config(object):
             self.__backup_keep_count = config_parser.get(section, "backup_keep_count")
             self.__backup_keep_count_by_number = config_parser.get(section, "backup_keep_count_by_number")
             self.__dry_run = config_parser.getboolean(section, "dry_run")
+            self.__bootable_only = config_parser.getboolean(section, "bootable_only")
+            self.__with_disks_deactivated = config_parser.getboolean(section, "with_disks_deactivated")
+            self.__disks_id_exclude = json.loads(config_parser.get(section, "disks_id_exclude"))
             self.__debug = debug
             self.__vm_name_max_length = config_parser.getint(section, "vm_name_max_length")
             self.__use_short_suffix = config_parser.getboolean(section, "use_short_suffix")
@@ -127,6 +130,14 @@ class Config(object):
     def get_dry_run(self):
         return self.__dry_run
 
+    def get_bootable_only(self):
+        return self.__bootable_only
+
+    def get_with_disks_deactivated(self):
+        return self.__with_disks_deactivated
+
+    def get_disks_id_exclude(self):
+        return self.__disks_id_exclude
 
     def get_debug(self):
         return self.__debug
