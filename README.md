@@ -92,3 +92,11 @@ Install [tox](http://tox.readthedocs.io/en/latest/index.html).
 ```sh
 $ tox
 ```
+
+## FIXES
+The script does not delete the cloned VM
+https://github.com/wefixit-AT/oVirtBackup/issues/67
+https://github.com/wefixit-AT/oVirtBackup/issues/66
+
+A comment in https://github.com/wefixit-AT/oVirtBackup/pull/72/commits/959b5fb376b5d951afdd8bef2ec2352ec421f415 suggested a fix for vmtools.py for a line of coded which was present in master and not included in the branches.
+I copied the relevant file to oVirt4.3 branch and changed the line as pointed out in the commit and everything worked as expected
