@@ -433,7 +433,7 @@ def main(argv):
             vms_with_failures.remove(vm_from_list)
         except Exception as e:
             logger.error("!!! Got unexpected exception: %s", e)
-            traceback.printexc()
+            traceback.print_exc()
             api.close()
             sys.exit(1)
 
