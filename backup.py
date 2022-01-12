@@ -261,6 +261,7 @@ def main(argv):
 
     # Test if all VM names are valid
     for vm_from_list in config.get_vm_names():
+        vm_from_list = str(vm_from_list)
         if vms_service.list(search='name=%s' % vm_from_list) is None:
             logger.error("!!! There are no VM with the following name in your cluster: %s", vm_from_list)
             api.close()
@@ -282,6 +283,7 @@ def main(argv):
     sd_service = sds_service.list(search='name=%s' % config.get_export_domain())[0]
 
     for vm_from_list in config.get_vm_names():
+        vm_from_list = str(vm_from_list)
         config.clear_vm_suffix()
         vm_clone_name = vm_from_list + config.get_vm_middle() + config.get_vm_suffix()
 
