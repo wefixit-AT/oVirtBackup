@@ -7,6 +7,7 @@ import sys
 import time
 from vmtools import VMTools
 from config import Config
+import traceback
 
 """
 Main class to make the backups
@@ -432,6 +433,7 @@ def main(argv):
             vms_with_failures.remove(vm_from_list)
         except Exception as e:
             logger.error("!!! Got unexpected exception: %s", e)
+            traceback.printexc()
             api.close()
             sys.exit(1)
 
