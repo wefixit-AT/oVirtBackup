@@ -122,7 +122,7 @@ class VMTools:
                         time.sleep(config.get_timeout())
                     done = True
         except Exception as e:
-            logger.info("!!! Can't delete cloned VM (%s)", vm.name)
+            logger.info("!!! Can't delete cloned VM (%s)", vm_name)
             raise e
         if done:
             logger.info("Cloned VM (%s) deleted" , vm.name)
