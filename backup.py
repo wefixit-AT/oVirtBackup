@@ -209,8 +209,6 @@ def main(argv):
         config.get_logger_fmt(), config.get_logger_file_path(), opts.debug,
     )
 
-    time_start = int(time.time())
-
     has_errors = False
 
     # Connect to server
@@ -282,6 +280,8 @@ def main(argv):
     sd_service = sds_service.list(search='name=%s' % config.get_export_domain())[0]
 
     for vm_from_list in config.get_vm_names():
+        time_start = int(time.time())
+
         config.clear_vm_suffix()
         vm_clone_name = vm_from_list + config.get_vm_middle() + config.get_vm_suffix()
 
