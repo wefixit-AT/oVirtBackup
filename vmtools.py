@@ -2,11 +2,10 @@ import logging
 import time
 import sys
 import datetime
-import operator
 import re
+import ovirtsdk4.types as types
 
 logger = logging.getLogger()
-import ovirtsdk4.types as types
 
 
 class VMTools:
@@ -18,6 +17,7 @@ class VMTools:
     def wait_for_snapshot_operation(api, vm, config, comment):
         """
         Wait for a snapshot operation to be finished
+        :param api: ovirtsdk api
         :param vm: Virtual machine object
         :param config: Configuration
         :param comment: This comment will be used for debugging output
@@ -33,19 +33,21 @@ class VMTools:
                         snap = snap_service.get()
                     except:
                         break
+
                     if snap.snapshot_status == types.SnapshotStatus.OK:
                         break
                     logger.debug("Snapshot operation(%s) in progress ...", comment)
-                    logger.debug("Snapshot id=%s status=%s", snap.id , snap.snapshot_status)
+                    logger.debug("Snapshot id=%s status=%s", snap.id, snap.snapshot_status)
                     time.sleep(config.get_timeout())
-
 
     @staticmethod
     def delete_snapshots(api, vm, config, vm_name):
         """
         Deletes a backup snapshot
+        :param api: ovirtsdk api
         :param vm: Virtual machine object
         :param config: Configuration
+        :param vm_name: Virtual machine object
         """
         logger.debug("Search backup snapshots matching Description=\"%s\"", config.get_snapshot_description())
         vm_service = api.system_service().vms_service().vm_service(vm.id)
@@ -55,7 +57,8 @@ class VMTools:
         if snapshots:
             for i in snapshots:
                 if i.description == config.get_snapshot_description():
-                    logger.debug("Found backup snapshot to delete. Description: %s, Created on: %s", i.description, i.date)
+                    logger.debug("Found backup snapshot to delete. Description: %s, Created on: %s", i.description,
+                                 i.date)
                     try:
                         while True:
                             try:
@@ -75,10 +78,10 @@ class VMTools:
                                     logger.info("  DEBUG: %s", e)
                                     sys.exit(1)
                     except Exception as e:
-                            logger.info("  !!! Can't delete snapshot for VM: %s", vm_name)
-                            logger.info("  Description: %s, Created on: %s", i.get_description(), i.get_date())
-                            logger.info("  DEBUG: %s", e)
-                            sys.exit(1)
+                        logger.info("  !!! Can't delete snapshot for VM: %s", vm_name)
+                        logger.info("  Description: %s, Created on: %s", i.get_description(), i.get_date())
+                        logger.info("  DEBUG: %s", e)
+                        sys.exit(1)
             if done:
                 logger.info("Snapshots deleted")
 
@@ -86,63 +89,67 @@ class VMTools:
     def delete_vm(api, config, vm_name):
         """
         Delets a vm which was created during backup
-        :param vm: Virtual machine object
+        :param api: ovirtsdk api
         :param config: Configuration
+        :param vm_name: Virtual machine object
         """
+        global global_vm
         done = False
         try:
             vms_service = api.system_service().vms_service()
-            vm_search_regexp = ("name=%s%s__*" % (vm_name, config.get_vm_middle()))
-            for vm in vms_service.list(search=vm_search_regexp):
-                logger.info("Delete cloned VM (%s) started ..." % vm.name)
+            vm_search_regexp = ("name=%s%s_*" % (vm_name, config.get_vm_middle()))
+            for global_vm in vms_service.list(search=vm_search_regexp):
+                logger.info("Delete cloned VM (%s) started ..." % global_vm.name)
                 if not config.get_dry_run():
-                    vm_service = vms_service.vm_service(vm.id)
+                    vm_service = vms_service.vm_service(global_vm.id)
                     if vm_service is None:
-                        logger.warn(
+                        logger.warning(
                             "The VM (%s) doesn't exist anymore, "
-                            "skipping deletion ...", vm.name
+                            "skipping deletion ...", global_vm.name
                         )
                         done = True
                         continue
-                    vm.delete_protected = False
-                    vm_service.update(vm)
+                    global_vm.delete_protected = False
+                    vm_service.update(global_vm)
                     while True:
                         try:
                             vm_service.remove()
                             break
                         except:
-                            logger.debug("Wait for previous clone operation to complete (VM %s status is %s)..." , vm.name, vm.status)
+                            logger.debug("Wait for previous clone operation to complete (VM %s status is %s)...",
+                                         global_vm.name, global_vm.status)
                             time.sleep(config.get_timeout())
                     while True:
                         try:
                             vm_service.get()
                         except:
                             break
-                        logger.debug("Deletion of cloned VM (%s) in progress ..." % vm.name)
+                        logger.debug("Deletion of cloned VM (%s) in progress ..." % global_vm.name)
                         time.sleep(config.get_timeout())
                     done = True
         except Exception as e:
-            logger.info("!!! Can't delete cloned VM (%s)", vm.name)
+            logger.info("!!! Can't delete cloned VM (%s)", global_vm.name)
             raise e
         if done:
-            logger.info("Cloned VM (%s) deleted" , vm.name)
+            logger.info("Cloned VM (%s) deleted", global_vm.name)
 
     @staticmethod
     def wait_for_vm_operation(api, config, comment, vm_name):
         """
         Wait for a vm operation to be finished
-        :param vm: Virtual machine object
+        :param api: ovirtsdk api
+        :param vm_name: Virtual machine object
         :param config: Configuration
         :param comment: This comment will be used for debugging output
         """
-        #not used 
+        # not used
         composed_vm_name = "%s%s%s" % (
             vm_name, config.get_vm_middle(), config.get_vm_suffix()
         )
         while True:
             vm = api.system_service().vms_service().list(search='name=%s' % composed_vm_name)
-            if len(vm) == 0 :
-                logger.warn(
+            if len(vm) == 0:
+                logger.warning(
                     "The VM (%s) doesn't exist anymore, "
                     "leaving waiting loop ...", composed_vm_name
                 )
@@ -163,34 +170,38 @@ class VMTools:
         Delete old backups from the export domain
         :param api: ovirtsdk api
         :param config: Configuration
+        :param vm_name: Virtual machine object
         """
-        vm_search_regexp = r'^'+ vm_name + config.get_vm_middle() + '*'
-        logger.debug("Looking for old backup to delete matching %s and older than %s days...", vm_search_regexp, config.get_backup_keep_count())
+        vm_search_regexp = r'^' + vm_name + config.get_vm_middle() + '*'
+        logger.debug("Looking for old backup to delete matching %s and older than %s days...", vm_search_regexp,
+                     config.get_backup_keep_count())
         sds_service = api.system_service().storage_domains_service()
-        export_sd = sds_service.list(search='name=%s' % config.get_export_domain() )[0]
+        export_sd = sds_service.list(search='name=%s' % config.get_export_domain())[0]
         vms_service = sds_service.storage_domain_service(export_sd.id).vms_service()
-        #missing list(search'name=... on storage_domain_service().vms_service().list()
+        # missing list(search'name=... on storage_domain_service().vms_service().list()
         exported_vms = vms_service.list()
-        exported_vms = [i for i in exported_vms if re.match(vm_search_regexp,i.name) ]
-        #not really needed to sort 
+        exported_vms = [i for i in exported_vms if re.match(vm_search_regexp, i.name)]
+        # not really needed to sort
         logger.info("Found %s old backup images in export_domain.", len(exported_vms))
         exported_vms.sort(key=lambda x: x.creation_time)
         for i in exported_vms:
-            datetimeStart = datetime.datetime.combine((datetime.date.today() - datetime.timedelta(config.get_backup_keep_count())), datetime.datetime.min.time())
+            datetimeStart = datetime.datetime.combine(
+                (datetime.date.today() - datetime.timedelta(config.get_backup_keep_count())),
+                datetime.datetime.min.time())
             timestampStart = time.mktime(datetimeStart.timetuple())
-            datetimeCreation = i.creation_time
-            datetimeCreation = datetimeCreation.replace(hour=0, minute=0, second=0)
-            timestampCreation = time.mktime(datetimeCreation.timetuple())
-            if timestampCreation < timestampStart:
+            datetime_creation = i.creation_time
+            datetime_creation = datetime_creation.replace(hour=0, minute=0, second=0)
+            timestamp_creation = time.mktime(datetime_creation.timetuple())
+            if timestamp_creation < timestampStart:
                 logger.info("Backup deletion (by date) started for backup: %s", i.name)
                 if not config.get_dry_run():
-                    vms_service.vm_service(id = i.id).remove()
+                    vms_service.vm_service(id=i.id).remove()
                     while True:
                         try:
-                            vms_service.vm_service(id = i.id).get()
-                            logger.debug("Delete old backup (%s) in progress ..." , i.name)
+                            vms_service.vm_service(id=i.id).get()
+                            logger.debug("Delete old backup (%s) in progress ...", i.name)
                             time.sleep(config.get_timeout())
-                        except: 
+                        except:
                             logger.info("Backup deletion complete for backup: %s", i.name)
                             break
 
@@ -200,28 +211,30 @@ class VMTools:
         Delete old backups from the export domain by number of requested
         :param api: ovirtsdk api
         :param config: Configuration
-        """
-        vm_search_regexp = r'^'+ vm_name + config.get_vm_middle() + '*'
-        logger.debug("Looking for old backup to delete matching %s, keeping max %s images...", vm_search_regexp, config.get_backup_keep_count_by_number())
+        :param vm_name: Virtual machine object
+      """
+        vm_search_regexp = r'^' + vm_name + config.get_vm_middle() + '*'
+        logger.debug("Looking for old backup to delete matching %s, keeping max %s images...", vm_search_regexp,
+                     config.get_backup_keep_count_by_number())
         sds_service = api.system_service().storage_domains_service()
-        export_sd = sds_service.list(search='name=%s' % config.get_export_domain() )[0]
+        export_sd = sds_service.list(search='name=%s' % config.get_export_domain())[0]
         vms_service = sds_service.storage_domain_service(export_sd.id).vms_service()
-        #missing list(search'name=... on storage_domain_service().vms_service().list()
+        # missing list(search'name=... on storage_domain_service().vms_service().list()
         exported_vms = vms_service.list()
-        exported_vms = [i for i in exported_vms if re.match(vm_search_regexp,i.name) ]
-        exported_vms.sort( key = lambda x: x.creation_time)
+        exported_vms = [i for i in exported_vms if re.match(vm_search_regexp, i.name)]
+        exported_vms.sort(key=lambda x: x.creation_time)
         logger.info("Found %s old backup images in export_domain.", len(exported_vms))
         while len(exported_vms) > config.get_backup_keep_count_by_number():
             i = exported_vms.pop(0)
             logger.info("Backup deletion (by number) started for backup: %s", i.name)
             if not config.get_dry_run():
-                vms_service.vm_service(id = i.id).remove()
+                vms_service.vm_service(id=i.id).remove()
                 while True:
                     try:
-                        vms_service.vm_service(id = i.id).get()
-                        logger.debug("Delete old backup (%s) in progress ..." , i.name)
+                        vms_service.vm_service(id=i.id).get()
+                        logger.debug("Delete old backup (%s) in progress ...", i.name)
                         time.sleep(config.get_timeout())
-                    except: 
+                    except:
                         logger.info("Backup deletion complete for backup: %s", i.name)
                         break
 
@@ -229,9 +242,12 @@ class VMTools:
     def check_free_space(api, config, vm):
         """
         Check if the summarized size of all VM disks is available on the storagedomain
+        :param api: ovirtsdk api
+        :param config: Configuration
         to avoid running out of space
+        :param  vm: object
         """
-        sd =  api.system_service().storage_domains_service().list(search='name=%s' % config.get_storage_domain())[0]
+        sd = api.system_service().storage_domains_service().list(search='name=%s' % config.get_storage_domain())[0]
         vm_service = api.system_service().vms_service().vm_service(vm.id)
         disk_attachments = vm_service.disk_attachments_service().list()
         vm_size = 0
@@ -246,7 +262,9 @@ class VMTools:
             storage_space_threshold = config.get_storage_space_threshold()
         vm_size *= (1 + storage_space_threshold)
         if (sd.available - vm_size) <= 0:
-            raise Exception("!!! The is not enough free storage on the storage domain '%s' available to backup the VM '%s'" % (config.get_storage_domain(), vm.name))
+            raise Exception(
+                "!!! The is not enough free storage on the storage domain '%s' available to backup the VM '%s'" % (
+                    config.get_storage_domain(), vm.name))
 
     @staticmethod
     def check_storage_domain_status(api, data_center, storage_domain):
