@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import logging
 from argparse import ArgumentParser, FileType
 import ovirtsdk4 as sdk
