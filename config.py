@@ -32,7 +32,7 @@ class Config(object):
                 if val is not None:
                     config_parser.set(section, key, str(val))
 
-            self.__vm_names = json.loads(config_parser.get(section, "vm_names"))
+            self.__vm_names_skip = json.loads(config_parser.get(section, "vm_names_skip"))
             self.__vm_middle = config_parser.get(section, "vm_middle")
             self.__vm_suffix = "_"
             self.clear_vm_suffix
@@ -59,14 +59,12 @@ class Config(object):
             print (str(e))
             sys.exit(1)
 
-    def get_vm_names(self):
-        return self.__vm_names
+    def get_vm_names_skip(self):
+        return self.__vm_names_skip
 
+    @DeprecationWarning
     def set_vm_names(self, vms):
-        self._cp.set(
-            CONFIG_SECTION, 'vm_names', json.dumps(vms)
-        )
-        self.__vm_names = vms[:]
+        return
 
     def get_vm_middle(self):
         return self.__vm_middle

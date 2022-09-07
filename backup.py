@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import logging
 from argparse import ArgumentParser, FileType
 import ovirtsdk4 as sdk
@@ -23,6 +23,7 @@ def initialize_logger(logger_fmt, logger_file_path, debug):
     if logger_file_path:
         logger_options['filename'] = logger_file_path
     logging.basicConfig(**logger_options)
+
 
 def create_argparser():
     p = ArgumentParser()
@@ -69,12 +70,11 @@ def create_argparser():
         default=None,
     )
 
-
     vmg = p.add_argument_group("VM's related arguments")
     vmg.add_argument(
         "-a", "--all-vms",
         help="Backup all VMs and override the list of VM's in the config "
-        "file",
+             "file",
         dest="all_vms",
         action="store_true",
         default=False,
@@ -82,14 +82,14 @@ def create_argparser():
     vmg.add_argument(
         "--tag",
         help="define the tag used to override the list of VM's that should"
- 	" be backed up",
-	dest="vm_tag",
-     	default=False,
+             " be backed up",
+        dest="vm_tag",
+        default=False,
     )
     vmg.add_argument(
-        "--vm-names",
-        help="List of names which VMs should be backed up",
-        dest="vm_names",
+        "--vm-names-skip",
+        help="List of names which VMs should not be backed up",
+        dest="vm_names_skip",
         default=None,
     )
     vmg.add_argument(
@@ -99,7 +99,7 @@ def create_argparser():
         default=None,
     )
 
-    dcg = p.add_argument_group("Data Centrum's related options")
+    dcg = p.add_argument_group("Data Centre's related options")
     dcg.add_argument(
         "--export-domain",
         help="Name of the NFS Export Domain",
@@ -187,15 +187,17 @@ def create_argparser():
     )
     return p
 
+
 def arguments_to_dict(opts):
     result = {}
     ignored_keys = ('config_file', 'dry_run', 'debug')
     for key, val in vars(opts).items():
         if key in ignored_keys:
-            continue  # These doesn't have a place in config file
+            continue  # This doesn't have a place in config file
         if val is not None:
             result[key] = val
     return result
+
 
 def main(argv):
     p = create_argparser()
@@ -216,33 +218,33 @@ def main(argv):
     # Connect to server
     connect()
 
-    system_service=api.system_service()
+    system_service = api.system_service()
 
     # Test if data center is valid
     # Retrieve the data center service:
-    if  system_service.data_centers_service().list(search='name=%s' % config.get_datacenter_name() )[0] is None:
+    if system_service.data_centers_service().list(search='name=%s' % config.get_datacenter_name())[0] is None:
         logger.error("!!! Check the datacenter_name in the config")
         api.close()
         sys.exit(1)
     # Test if config export_domain is valid
-    if system_service.storage_domains_service().list(search='name=%s' % config.get_export_domain() )[0] is None:
+    if system_service.storage_domains_service().list(search='name=%s' % config.get_export_domain())[0] is None:
         logger.error("!!! Check the export_domain in the config " + config.get_export_domain())
         api.close()
         sys.exit(1)
 
     # Test if config cluster_name is valid
-    if system_service.clusters_service().list(search='name=%s' % config.get_cluster_name() )[0] is None:
+    if system_service.clusters_service().list(search='name=%s' % config.get_cluster_name())[0] is None:
         logger.error("!!! Check the cluster_name in the config")
         api.close()
         sys.exit(1)
 
     # Test if config storage_domain is valid
-    if system_service.storage_domains_service().list(search='name=%s' % config.get_storage_domain() )[0] is None:
+    if system_service.storage_domains_service().list(search='name=%s' % config.get_storage_domain())[0] is None:
         logger.error("!!! Check the storage_domain in the config")
         api.close()
         sys.exit(1)
 
-    vms_service=system_service.vms_service()
+    vms_service = system_service.vms_service()
 
     # Add all VM's to the config file
     if opts.all_vms:
@@ -253,18 +255,11 @@ def main(argv):
             config.write_update(opts.config_file.name)
     # Add VM's with the tag to the vm list
     if opts.vm_tag:
-        vms = vms_service.list(max=400, query="tag="+opts.vm_tag)
+        vms = vms_service.list(max=400, query="tag=" + opts.vm_tag)
         config.set_vm_names([vm.name for vm in vms])
         # Update config file
         if opts.config_file.name != "<stdin>":
             config.write_update(opts.config_file.name)
-
-    # Test if all VM names are valid
-    for vm_from_list in config.get_vm_names():
-        if vms_service.list(search='name=%s' % vm_from_list) is None:
-            logger.error("!!! There are no VM with the following name in your cluster: %s", vm_from_list)
-            api.close()
-            sys.exit(1)
 
     # Test if config vm_middle is valid
     if not config.get_vm_middle():
@@ -272,26 +267,39 @@ def main(argv):
         api.close()
         sys.exit(1)
 
-    vms_with_failures = list(config.get_vm_names())
-
+    vms_with_failures = list()
 
     dcs_service = system_service.data_centers_service()
-    dc = dcs_service.list(search='name=%s' % config.get_datacenter_name() )[0]
+    dc = dcs_service.list(search='name=%s' % config.get_datacenter_name())[0]
     dc_service = dcs_service.data_center_service(dc.id)
     sds_service = dc_service.storage_domains_service()
-    sd_service = sds_service.list(search='name=%s' % config.get_export_domain())[0]
+    sds_export_service = sds_service.list(search='name=%s' % config.get_export_domain())[0]
 
-    for vm_from_list in config.get_vm_names():
+    if sds_export_service is None:
+        logger.error("")
+        api.close()
+        sys.exit(1)
+
+    for vm_from_dc in vms_service.list():
+        vm_from_list = vm_from_dc.name
+
+        vms_with_failures.append(vm_from_list)
+
+        if vm_from_list in config.get_vm_names_skip():
+            logger.info("VM name: %s skip", vm_from_list)
+            vms_with_failures.remove(vm_from_list)
+            continue
+
         config.clear_vm_suffix()
         vm_clone_name = vm_from_list + config.get_vm_middle() + config.get_vm_suffix()
 
         # Check VM name length limitation
         length = len(vm_clone_name)
         if length > config.get_vm_name_max_length():
-            logger.error("!!! VM name with middle and suffix are to long (size: %s, allowed %s) !!!", length, config.get_vm_name_max_length())
+            logger.error("!!! VM name with middle and suffix are to long (size: %s, allowed %s) !!!", length,
+                         config.get_vm_name_max_length())
             logger.info("VM name: %s", vm_clone_name)
-            api.close()
-            sys.exit(1)
+            continue
 
         logger.info("Start backup for: %s", vm_from_list)
         try:
@@ -304,15 +312,15 @@ def main(argv):
             VMTools.delete_vm(api, config, vm_from_list)
 
             # Get the VM
-            vm = vms_service.list(search='name=%s' % vm_from_list) 
-            if len(vm) == 0 :
-                logger.warn(
+            vm = vms_service.list(search='name=%s' % vm_from_list)
+            if len(vm) == 0:
+                logger.warning(
                     "The VM (%s) doesn't exist anymore, skipping backup ...",
                     vm_from_list
                 )
                 continue
 
-            vm=vm[0]
+            vm = vm[0]
 
             # Delete old backup snapshots
             VMTools.delete_snapshots(api, vm, config, vm_from_list)
@@ -332,7 +340,7 @@ def main(argv):
                             persist_memorystate=config.get_persist_memorystate(),
                         ),
                     )
-                    VMTools.wait_for_snapshot_operation(api,vm, config, "creation")
+                    VMTools.wait_for_snapshot_operation(api, vm, config, "creation")
                 logger.info("Snapshot created")
             except Exception as e:
                 logger.info("Can't create snapshot for VM: %s", vm_from_list)
@@ -347,7 +355,7 @@ def main(argv):
             snap = None
             for i in snapshots:
                 if i.description == config.get_snapshot_description():
-                    snap=i
+                    snap = i
 
             if not snap:
                 logger.error("!!! No snapshot found !!!")
@@ -358,15 +366,15 @@ def main(argv):
             if not config.get_dry_run():
                 cloned_vm = vms_service.add(
                     vm=types.Vm(
-                    name=vm_clone_name, 
-                    memory=vm.memory,
-                    snapshots=[
-                        types.Snapshot(
-                            id=snap.id
-                        )
-                    ],
-                    cluster=types.Cluster(
-                        name=config.get_cluster_name()
+                        name=vm_clone_name,
+                        memory=vm.memory,
+                        snapshots=[
+                            types.Snapshot(
+                                id=snap.id
+                            )
+                        ],
+                        cluster=types.Cluster(
+                            name=config.get_cluster_name()
                         )
                     )
                 )
@@ -379,7 +387,7 @@ def main(argv):
                     logger.debug("Cloning into VM (%s) in progress ..." % vm_clone_name)
                     cloned_vm = cloned_vm_service.get()
                     if cloned_vm.status == types.VmStatus.DOWN:
-                         break
+                        break
 
             logger.info("Cloning finished")
 
@@ -387,9 +395,9 @@ def main(argv):
             VMTools.delete_snapshots(api, vm, config, vm_from_list)
 
             # Delete old backups
-            if (config.get_backup_keep_count()):
+            if config.get_backup_keep_count():
                 VMTools.delete_old_backups(api, config, vm_from_list)
-            if (config.get_backup_keep_count_by_number()):
+            if config.get_backup_keep_count_by_number():
                 VMTools.delete_old_backups_by_number(api, config, vm_from_list)
 
             # Export the VM
@@ -438,27 +446,30 @@ def main(argv):
     logger.info("All backups done")
 
     if vms_with_failures:
-        logger.info("Backup failured for:")
+        logger.info("Backup failure for:")
         for i in vms_with_failures:
             logger.info("  %s", i)
 
     if has_errors:
-        logger.info("Some errors occured during the backup, please check the log file")
+        logger.info("Some errors occurred during the backup, please check the log file")
         api.close()
         sys.exit(1)
 
     # Disconnect from the server
     api.close()
 
+
 def connect():
     global api
+
     api = sdk.Connection(
-            url=config.get_server(),
-            username=config.get_username(),
-            password=config.get_password(),
-            insecure=True,
-            debug=False
-            )
+        url=config.get_server(),
+        username=config.get_username(),
+        password=config.get_password(),
+        insecure=True,
+        debug=False
+    )
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
