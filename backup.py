@@ -8,6 +8,8 @@ import time
 from vmtools import VMTools
 from config import Config
 
+VMS_MAX_LIST = 400
+
 """
 Main class to make the backups
 """
@@ -77,19 +79,25 @@ def create_argparser():
              "file",
         dest="all_vms",
         action="store_true",
-        default=False,
+        default=None,
     )
     vmg.add_argument(
         "--tag",
         help="define the tag used to override the list of VM's that should"
              " be backed up",
         dest="vm_tag",
-        default=False,
+        default=None,
     )
     vmg.add_argument(
         "--vm-names-skip",
         help="List of names which VMs should not be backed up",
         dest="vm_names_skip",
+        default=None,
+    )
+    vmg.add_argument(
+        "--vm-names",
+        help="List of names which VMs should be backed up",
+        dest="vm_names",
         default=None,
     )
     vmg.add_argument(
@@ -199,6 +207,12 @@ def arguments_to_dict(opts):
     return result
 
 
+def close_and_exit(err_msg):
+    logger.error(err_msg)
+    api.close()
+    sys.exit(1)
+
+
 def main(argv):
     p = create_argparser()
     opts = p.parse_args(argv)
@@ -223,49 +237,51 @@ def main(argv):
     # Test if data center is valid
     # Retrieve the data center service:
     if system_service.data_centers_service().list(search='name=%s' % config.get_datacenter_name())[0] is None:
-        logger.error("!!! Check the datacenter_name in the config")
-        api.close()
-        sys.exit(1)
+        close_and_exit(err_msg="!!! Check the datacenter_name in the config")
+
     # Test if config export_domain is valid
     if system_service.storage_domains_service().list(search='name=%s' % config.get_export_domain())[0] is None:
-        logger.error("!!! Check the export_domain in the config " + config.get_export_domain())
-        api.close()
-        sys.exit(1)
+        close_and_exit(err_msg=f"!!! Check the export_domain in the config {config.get_export_domain()}")
 
     # Test if config cluster_name is valid
     if system_service.clusters_service().list(search='name=%s' % config.get_cluster_name())[0] is None:
-        logger.error("!!! Check the cluster_name in the config")
-        api.close()
-        sys.exit(1)
+        close_and_exit(err_msg="!!! Check the cluster_name in the config")
 
     # Test if config storage_domain is valid
     if system_service.storage_domains_service().list(search='name=%s' % config.get_storage_domain())[0] is None:
-        logger.error("!!! Check the storage_domain in the config")
-        api.close()
-        sys.exit(1)
+        close_and_exit(err_msg="!!! Check the storage_domain in the config")
 
     vms_service = system_service.vms_service()
 
     # Add all VM's to the config file
-    if opts.all_vms:
-        vms = vms_service.list(max=400)
-        config.set_vm_names([vm.name for vm in vms])
-        # Update config file
-        if opts.config_file.name != "<stdin>":
-            config.write_update(opts.config_file.name)
-    # Add VM's with the tag to the vm list
-    if opts.vm_tag:
-        vms = vms_service.list(max=400, query="tag=" + opts.vm_tag)
+    if config.get_all_vms():
+        vms = vms_service.list(max=VMS_MAX_LIST)
         config.set_vm_names([vm.name for vm in vms])
         # Update config file
         if opts.config_file.name != "<stdin>":
             config.write_update(opts.config_file.name)
 
+    # Add VM's with the tag to the vm list
+    if config.get_vm_tag():
+        vms = vms_service.list(max=VMS_MAX_LIST, search=f"tag={config.get_vm_tag()}")
+        config.set_vm_names([vm.name for vm in vms])
+        # Update config file
+        if opts.config_file.name != "<stdin>":
+            config.write_update(opts.config_file.name)
+
+    if config.get_vm_names_skip():
+        vms = vms_service.list(max=VMS_MAX_LIST)
+        vm_names_skip = config.get_vm_names_skip()
+        config.set_vm_names([vm.name for vm in vms if vm.name not in vm_names_skip])
+
+    # Test if all VM names are valid
+    for vm_from_list in config.get_vm_names():
+        if vms_service.list(search=f"name={vm_from_list}") is None:
+            close_and_exit(err_msg=f"!!! There are no VM with the following name in your cluster: {vm_from_list}")
+
     # Test if config vm_middle is valid
     if not config.get_vm_middle():
-        logger.error("!!! It's not valid to leave vm_middle empty")
-        api.close()
-        sys.exit(1)
+        close_and_exit(err_msg="!!! It's not valid to leave vm_middle empty")
 
     vms_with_failures = list()
 
@@ -276,19 +292,10 @@ def main(argv):
     sds_export_service = sds_service.list(search='name=%s' % config.get_export_domain())[0]
 
     if sds_export_service is None:
-        logger.error("")
-        api.close()
-        sys.exit(1)
+        close_and_exit(err_msg="")
 
-    for vm_from_dc in vms_service.list():
-        vm_from_list = vm_from_dc.name
-
+    for vm_from_list in config.get_vm_names():
         vms_with_failures.append(vm_from_list)
-
-        if vm_from_list in config.get_vm_names_skip():
-            logger.info("VM name: %s skip", vm_from_list)
-            vms_with_failures.remove(vm_from_list)
-            continue
 
         config.clear_vm_suffix()
         vm_clone_name = vm_from_list + config.get_vm_middle() + config.get_vm_suffix()
@@ -302,6 +309,10 @@ def main(argv):
             continue
 
         logger.info("Start backup for: %s", vm_from_list)
+        if config.get_dry_run():
+            vms_with_failures.remove(vm_from_list)
+            continue
+
         try:
             VMTools.check_storage_domain_status(
                 api,
@@ -439,21 +450,17 @@ def main(argv):
             logger.info("Backup done for: %s", vm_from_list)
             vms_with_failures.remove(vm_from_list)
         except Exception as e:
-            logger.error("!!! Got unexpected exception: %s", e)
-            api.close()
-            sys.exit(1)
+            close_and_exit(err_msg=f"!!! Got unexpected exception: {e}")
 
     logger.info("All backups done")
 
     if vms_with_failures:
         logger.info("Backup failure for:")
-        for i in vms_with_failures:
-            logger.info("  %s", i)
+        for vm_with_failures in vms_with_failures:
+            logger.info(f"  {vm_with_failures}")
 
     if has_errors:
-        logger.info("Some errors occurred during the backup, please check the log file")
-        api.close()
-        sys.exit(1)
+        close_and_exit(err_msg="Some errors occurred during the backup, please check the log file")
 
     # Disconnect from the server
     api.close()

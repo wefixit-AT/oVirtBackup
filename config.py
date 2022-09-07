@@ -32,7 +32,10 @@ class Config(object):
                 if val is not None:
                     config_parser.set(section, key, str(val))
 
-            self.__vm_names_skip = json.loads(config_parser.get(section, "vm_names_skip"))
+            self.__vm_names = json.loads(config_parser.get(section, "vm_names", fallback="[]"))
+            self.__vm_names_skip = json.loads(config_parser.get(section, "vm_names_skip", fallback="[]"))
+            self.__vm_tag = config_parser.get(section, "vm_tag", fallback=None)
+            self.__all_vms = config_parser.getboolean(section, "all_vms", fallback=None)
             self.__vm_middle = config_parser.get(section, "vm_middle")
             self.__vm_suffix = "_"
             self.clear_vm_suffix
@@ -56,45 +59,47 @@ class Config(object):
             self.__logger_file_path = config_parser.get(section, "logger_file_path")
             self.__persist_memorystate = config_parser.getboolean(section, "persist_memorystate")
         except (NoSectionError, NoOptionError) as e:
-            print (str(e))
+            print(str(e))
             sys.exit(1)
+
+    def get_vm_names(self):
+        return self.__vm_names
 
     def get_vm_names_skip(self):
         return self.__vm_names_skip
 
-    @DeprecationWarning
     def set_vm_names(self, vms):
-        return
+        self._cp.set(CONFIG_SECTION, 'vm_names', json.dumps(vms))
+        self.__vm_names = vms[:]
+
+    def get_vm_tag(self):
+        return self.__vm_tag
+
+    def get_all_vms(self):
+        return self.__all_vms
 
     def get_vm_middle(self):
         return self.__vm_middle
-
 
     def clear_vm_suffix(self):
         self.__vm_suffix = "_" + strftime("%Y%m%d_%H%M%S")
         if self.__use_short_suffix:
             self.__vm_suffix = "_" + strftime("%m%d%S")
 
-
     def get_vm_suffix(self):
         return self.__vm_suffix
-
 
     def get_server(self):
         return self.__server
 
-
     def get_username(self):
         return self.__username
-
 
     def get_password(self):
         return self.__password
 
-
     def get_snapshot_description(self):
         return self.__snapshot_description
-
 
     def get_cluster_name(self):
         return self.__cluster_name
@@ -105,46 +110,36 @@ class Config(object):
     def get_export_domain(self):
         return self.__export_domain
 
-
     def get_timeout(self):
         return self.__timeout
-
 
     def get_backup_keep_count(self):
         if self.__backup_keep_count:
             self.__backup_keep_count = int(self.__backup_keep_count)
         return self.__backup_keep_count
 
-
     def get_backup_keep_count_by_number(self):
         if self.__backup_keep_count_by_number:
             self.__backup_keep_count_by_number = int(self.__backup_keep_count_by_number)
         return self.__backup_keep_count_by_number
 
-
     def get_dry_run(self):
         return self.__dry_run
-
 
     def get_debug(self):
         return self.__debug
 
-
     def get_vm_name_max_length(self):
         return self.__vm_name_max_length
-
 
     def get_use_short_suffix(self):
         return self.__use_short_suffix
 
-
     def get_storage_domain(self):
         return self.__storage_domain
 
-
     def get_storage_space_threshold(self):
         return self.__storage_space_threshold
-
 
     def get_logger_fmt(self):
         return self.__logger_fmt
