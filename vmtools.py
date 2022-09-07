@@ -253,18 +253,22 @@ class VMTools:
         vm_size = 0
         for disk_attachment in disk_attachments:
             disk_id = disk_attachment.disk.id
+            if disk_id in config.get_disks_id_exclude():
+                logger.info('excluded disk: ', disk_id)
+                continue
             disk = api.system_service().disks_service().disk_service(disk_id).get()
             # For safety reason "vm.actual_size" is not used
             if disk.provisioned_size is not None:
                 vm_size += disk.provisioned_size
+        logger.info("VM SIZE: %s GiB", vm_size /1024/1024/1024)
         storage_space_threshold = 0
         if config.get_storage_space_threshold() > 0:
             storage_space_threshold = config.get_storage_space_threshold()
         vm_size *= (1 + storage_space_threshold)
         if (sd.available - vm_size) <= 0:
             raise Exception(
-                "!!! The is not enough free storage on the storage domain '%s' available to backup the VM '%s'" % (
-                    config.get_storage_domain(), vm.name))
+                "!!! The is not enough free storage on the storage domain '%s' available to backup the VM '%s', need at least %s GiB" % (
+                    config.get_storage_domain(), vm.name, vm_size/1024/1024/1024))
 
     @staticmethod
     def check_storage_domain_status(api, data_center, storage_domain):
