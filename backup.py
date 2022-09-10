@@ -107,6 +107,26 @@ def create_argparser():
         default=None,
     )
 
+    dsk = p.add_argument_group("VM's disks arguments")
+    dsk.add_argument(
+        "--bootable_only",
+        help="Backup Bootable Disk Only",
+        dest="bootable_only",
+        default=None,
+    )
+    dsk.add_argument(
+        "--with_disks_deactivated",
+        help="Backup deactivated disks",
+        dest="with_disks_deactivated",
+        default=None,
+    )
+    dsk.add_argument(
+        "--disks_id_exclude",
+        help="an array of exclude disks id",
+        dest="disks_id_exclude",
+        default=None,
+    )
+
     dcg = p.add_argument_group("Data Centre's related options")
     dcg.add_argument(
         "--export-domain",
@@ -333,6 +353,32 @@ def main(argv):
 
             vm = vm[0]
 
+            # Get the Attachments Disk
+            disk_attachments = vms_service.vm_service(vm.id).disk_attachments_service().list()
+            disksBackup = []
+            BootableOnly = config.get_bootable_only()
+            for disk_attachment in disk_attachments:
+                if BootableOnly:
+                    if disk_attachment.bootable == True:
+                        disksBackup.append(disk_attachment)
+                        break
+                elif config.get_with_disks_deactivated() or disk_attachment.active:
+                    disksBackup.append(disk_attachment)
+
+            if not BootableOnly:
+                disks_id_exclude=config.get_disks_id_exclude()
+                if disks_id_exclude:
+                    disksBackup = [disk for disk in disksBackup if disk.id not in disks_id_exclude]
+
+            for disk_attachment in disksBackup:
+                if disk_attachment.bootable == True:
+                    logger.info("Finding bootable disk: %s", disk_attachment.id)
+                else:
+                    logger.info("Finding disk: %s", disk_attachment.id)
+#                print disk_attachment.id
+#            break
+#            print disks_id[0].__dict__
+
             # Delete old backup snapshots
             VMTools.delete_snapshots(api, vm, config, vm_from_list)
 
@@ -349,6 +395,7 @@ def main(argv):
                         types.Snapshot(
                             description=config.get_snapshot_description(),
                             persist_memorystate=config.get_persist_memorystate(),
+                            disk_attachments=disksBackup,
                         ),
                     )
                     VMTools.wait_for_snapshot_operation(api, vm, config, "creation")
