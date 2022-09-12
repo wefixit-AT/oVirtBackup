@@ -355,29 +355,26 @@ def main(argv):
 
             # Get the Attachments Disk
             disk_attachments = vms_service.vm_service(vm.id).disk_attachments_service().list()
-            disksBackup = []
-            BootableOnly = config.get_bootable_only()
+            disks_backup = []
+            bootable_only = config.get_bootable_only()
             for disk_attachment in disk_attachments:
-                if BootableOnly:
+                if bootable_only:
                     if disk_attachment.bootable == True:
-                        disksBackup.append(disk_attachment)
+                        disks_backup.append(disk_attachment)
                         break
                 elif config.get_with_disks_deactivated() or disk_attachment.active:
-                    disksBackup.append(disk_attachment)
+                    disks_backup.append(disk_attachment)
 
-            if not BootableOnly:
+            if not bootable_only:
                 disks_id_exclude=config.get_disks_id_exclude()
                 if disks_id_exclude:
-                    disksBackup = [disk for disk in disksBackup if disk.id not in disks_id_exclude]
+                    disks_backup = [disk for disk in disks_backup if disk.id not in disks_id_exclude]
 
-            for disk_attachment in disksBackup:
+            for disk_attachment in disks_backup:
                 if disk_attachment.bootable == True:
-                    logger.info("Finding bootable disk: %s", disk_attachment.id)
+                    logger.info(f"Finding bootable disk: {disk_attachment.id}")
                 else:
-                    logger.info("Finding disk: %s", disk_attachment.id)
-#                print disk_attachment.id
-#            break
-#            print disks_id[0].__dict__
+                    logger.info(f"Finding disk: {disk_attachment.id}")
 
             # Delete old backup snapshots
             VMTools.delete_snapshots(api, vm, config, vm_from_list)
@@ -395,7 +392,7 @@ def main(argv):
                         types.Snapshot(
                             description=config.get_snapshot_description(),
                             persist_memorystate=config.get_persist_memorystate(),
-                            disk_attachments=disksBackup,
+                            disk_attachments=disks_backup,
                         ),
                     )
                     VMTools.wait_for_snapshot_operation(api, vm, config, "creation")
