@@ -5,6 +5,7 @@ import ovirtsdk4 as sdk
 import ovirtsdk4.types as types
 import sys
 import time
+import datetime
 from vmtools import VMTools
 from config import Config
 
@@ -309,6 +310,7 @@ def main(argv):
             continue
 
         logger.info("Start backup for: %s", vm_from_list)
+        vm_time_start = int(time.time())
         if config.get_dry_run():
             vms_with_failures.remove(vm_from_list)
             continue
@@ -440,18 +442,16 @@ def main(argv):
             # Delete the CLONED VM
             VMTools.delete_vm(api, config, vm_from_list)
 
-            time_end = int(time.time())
-            time_diff = (time_end - time_start)
-            time_minutes = int(time_diff / 60)
-            time_seconds = time_diff % 60
-
-            logger.info("Duration: %s:%s minutes", time_minutes, time_seconds)
+            vm_backup_time = str(datetime.timedelta( seconds = int(time.time()) - vm_time_start ))
+            logger.info("VM \"%s\" backup duration: %s ", vm_from_list, vm_backup_time )
             logger.info("VM exported as %s", vm_clone_name)
             logger.info("Backup done for: %s", vm_from_list)
             vms_with_failures.remove(vm_from_list)
         except Exception as e:
             close_and_exit(err_msg=f"!!! Got unexpected exception: {e}")
 
+    backup_time = str(datetime.timedelta( seconds = int(time.time()) - time_start ))
+    logger.info("Overall duration: %s ", backup_time)
     logger.info("All backups done")
 
     if vms_with_failures:
