@@ -107,6 +107,26 @@ def create_argparser():
         default=None,
     )
 
+    dsk = p.add_argument_group("VM's disks arguments")
+    dsk.add_argument(
+        "--bootable_only",
+        help="Backup Bootable Disk Only",
+        dest="bootable_only",
+        default=None,
+    )
+    dsk.add_argument(
+        "--with_disks_deactivated",
+        help="Backup deactivated disks",
+        dest="with_disks_deactivated",
+        default=None,
+    )
+    dsk.add_argument(
+        "--disks_id_exclude",
+        help="an array of exclude disks id",
+        dest="disks_id_exclude",
+        default=None,
+    )
+
     dcg = p.add_argument_group("Data Centre's related options")
     dcg.add_argument(
         "--export-domain",
@@ -138,6 +158,18 @@ def create_argparser():
         "--snapshot-description",
         help="Description which should be set to created snapshot",
         dest="snapshot_description",
+        default=None,
+    )
+    mscg.add_argument(
+        "--clone-to-vm",
+        help="Should we clone to new VM",
+        dest="clone_to_vm",
+        default=None,
+    )
+    mscg.add_argument(
+        "--export-to-nfs",
+        help="Should we export to NFS domain (also clones to new VM)",
+        dest="export_to_nfs",
         default=None,
     )
     mscg.add_argument(
@@ -333,8 +365,31 @@ def main(argv):
 
             vm = vm[0]
 
+            # Get the Attachments Disk
+            disk_attachments = vms_service.vm_service(vm.id).disk_attachments_service().list()
+            disks_backup = []
+            bootable_only = config.get_bootable_only()
+            for disk_attachment in disk_attachments:
+                if bootable_only:
+                    if disk_attachment.bootable == True:
+                        disks_backup.append(disk_attachment)
+                        break
+                elif config.get_with_disks_deactivated() or disk_attachment.active:
+                    disks_backup.append(disk_attachment)
+
+            if not bootable_only:
+                disks_id_exclude=config.get_disks_id_exclude()
+                if disks_id_exclude:
+                    disks_backup = [disk for disk in disks_backup if disk.id not in disks_id_exclude]
+
+            for disk_attachment in disks_backup:
+                if disk_attachment.bootable == True:
+                    logger.info(f"Finding bootable disk: {disk_attachment.id}")
+                else:
+                    logger.info(f"Finding disk: {disk_attachment.id}")
+
             # Delete old backup snapshots
-            VMTools.delete_snapshots(api, vm, config, vm_from_list)
+            # VMTools.delete_snapshots(api, vm, config, vm_from_list)
 
             # Check free space on the storage
             VMTools.check_free_space(api, config, vm)
@@ -349,6 +404,7 @@ def main(argv):
                         types.Snapshot(
                             description=config.get_snapshot_description(),
                             persist_memorystate=config.get_persist_memorystate(),
+                            disk_attachments=disks_backup,
                         ),
                     )
                     VMTools.wait_for_snapshot_operation(api, vm, config, "creation")
@@ -361,49 +417,50 @@ def main(argv):
             # Workaround for some SDK problems see issue #17
             time.sleep(config.get_timeout())
 
-            # Clone the snapshot into a VM
-            snapshots = snapshots_service.list()
-            snap = None
-            for i in snapshots:
-                if i.description == config.get_snapshot_description():
-                    snap = i
+            if config.get_clone_to_vm():
+                # Clone the snapshot into a VM
+                snapshots = snapshots_service.list()
+                snap = None
+                for i in snapshots:
+                    if i.description == config.get_snapshot_description():
+                        snap = i
 
-            if not snap:
-                logger.error("!!! No snapshot found !!!")
-                has_errors = True
-                continue
+                if not snap:
+                    logger.error("!!! No snapshot found !!!")
+                    has_errors = True
+                    continue
 
-            logger.info("Clone into VM (%s) started ..." % vm_clone_name)
-            if not config.get_dry_run():
-                cloned_vm = vms_service.add(
-                    vm=types.Vm(
-                        name=vm_clone_name,
-                        memory=vm.memory,
-                        snapshots=[
-                            types.Snapshot(
-                                id=snap.id
+                logger.info("Clone into VM (%s) started ..." % vm_clone_name)
+                if not config.get_dry_run():
+                    cloned_vm = vms_service.add(
+                        vm=types.Vm(
+                            name=vm_clone_name,
+                            memory=vm.memory,
+                            snapshots=[
+                                types.Snapshot(
+                                    id=snap.id
+                                )
+                            ],
+                            cluster=types.Cluster(
+                                name=config.get_cluster_name()
                             )
-                        ],
-                        cluster=types.Cluster(
-                            name=config.get_cluster_name()
                         )
                     )
-                )
-                # Find the service that manages the cloned virtual machine:
-                cloned_vm_service = vms_service.vm_service(cloned_vm.id)
-                # Wait till the virtual machine is down, as that means that the creation
-                # of the disks of the virtual machine has been completed:
-                while True:
-                    time.sleep(config.get_timeout())
-                    logger.debug("Cloning into VM (%s) in progress ..." % vm_clone_name)
-                    cloned_vm = cloned_vm_service.get()
-                    if cloned_vm.status == types.VmStatus.DOWN:
-                        break
+                    # Find the service that manages the cloned virtual machine:
+                    cloned_vm_service = vms_service.vm_service(cloned_vm.id)
+                    # Wait till the virtual machine is down, as that means that the creation
+                    # of the disks of the virtual machine has been completed:
+                    while True:
+                        time.sleep(config.get_timeout())
+                        logger.debug("Cloning into VM (%s) in progress ..." % vm_clone_name)
+                        cloned_vm = cloned_vm_service.get()
+                        if cloned_vm.status == types.VmStatus.DOWN:
+                            break
 
-            logger.info("Cloning finished")
+                logger.info("Cloning finished")
 
-            # Delete backup snapshots
-            VMTools.delete_snapshots(api, vm, config, vm_from_list)
+                # Delete backup snapshots
+                VMTools.delete_snapshots(api, vm, config, vm_from_list)
 
             # Delete old backups
             if config.get_backup_keep_count():
@@ -411,34 +468,35 @@ def main(argv):
             if config.get_backup_keep_count_by_number():
                 VMTools.delete_old_backups_by_number(api, config, vm_from_list)
 
-            # Export the VM
-            try:
-                vm_clone = api.system_service().vms_service().list(search='name=%s' % vm_clone_name)[0]
-                logger.info("Export of VM (%s) started ..." % vm_clone_name)
-                if not config.get_dry_run():
-                    cloned_vm_service = vms_service.vm_service(vm_clone.id)
-                    cloned_vm_service.export(
-                        exclusive=True,
-                        discard_snapshots=True,
-                        storage_domain=types.StorageDomain(
-                            name=config.get_export_domain()
+            if config.get_export_to_nfs():
+                # Export the VM
+                try:
+                    vm_clone = api.system_service().vms_service().list(search='name=%s' % vm_clone_name)[0]
+                    logger.info("Export of VM (%s) started ..." % vm_clone_name)
+                    if not config.get_dry_run():
+                        cloned_vm_service = vms_service.vm_service(vm_clone.id)
+                        cloned_vm_service.export(
+                            exclusive=True,
+                            discard_snapshots=True,
+                            storage_domain=types.StorageDomain(
+                                name=config.get_export_domain()
+                            )
                         )
-                    )
-                    while True:
-                        time.sleep(config.get_timeout())
-                        cloned_vm = cloned_vm_service.get()
-                        if cloned_vm.status == types.VmStatus.DOWN:
-                            break
+                        while True:
+                            time.sleep(config.get_timeout())
+                            cloned_vm = cloned_vm_service.get()
+                            if cloned_vm.status == types.VmStatus.DOWN:
+                                break
 
-                logger.info("Exporting finished")
-            except Exception as e:
-                logger.info("Can't export cloned VM (%s) to domain: %s", vm_clone_name, config.get_export_domain())
-                logger.info("DEBUG: %s", e)
-                has_errors = True
-                continue
+                    logger.info("Exporting finished")
+                except Exception as e:
+                    logger.info("Can't export cloned VM (%s) to domain: %s", vm_clone_name, config.get_export_domain())
+                    logger.info("DEBUG: %s", e)
+                    has_errors = True
+                    continue
 
-            # Delete the CLONED VM
-            VMTools.delete_vm(api, config, vm_from_list)
+                # Delete the CLONED VM
+                VMTools.delete_vm(api, config, vm_from_list)
 
             time_end = int(time.time())
             time_diff = (time_end - time_start)
