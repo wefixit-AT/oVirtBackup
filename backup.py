@@ -405,12 +405,6 @@ def main(argv):
             # Delete backup snapshots
             VMTools.delete_snapshots(api, vm, config, vm_from_list)
 
-            # Delete old backups
-            if config.get_backup_keep_count():
-                VMTools.delete_old_backups(api, config, vm_from_list)
-            if config.get_backup_keep_count_by_number():
-                VMTools.delete_old_backups_by_number(api, config, vm_from_list)
-
             # Export the VM
             try:
                 vm_clone = api.system_service().vms_service().list(search='name=%s' % vm_clone_name)[0]
@@ -437,6 +431,12 @@ def main(argv):
                 has_errors = True
                 continue
 
+            # Delete old backups
+            if config.get_backup_keep_count():
+                VMTools.delete_old_backups(api, config, vm_from_list)
+            if config.get_backup_keep_count_by_number():
+                VMTools.delete_old_backups_by_number(api, config, vm_from_list)
+            
             # Delete the CLONED VM
             VMTools.delete_vm(api, config, vm_from_list)
 
